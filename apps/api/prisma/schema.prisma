@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ===== ROLES & USERS =====
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  role         Role       @relation(fields: [roleId], references: [id])
+  firstName    String
+  lastName     String
+  email        String     @unique
+  passwordHash String
+  phone        String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  schedules    Schedule[]
+  timeLogs     TimeLog[]
+  leaves       Leave[]
+  orders       Order[]
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+}
+
+model TimeLog {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  clockIn   DateTime
+  clockOut  DateTime?
+}
+
+model Leave {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  startDate DateTime
+  endDate   DateTime
+  type      String?
+  status    String   @default("pending")
+}
+
+// ===== MENU & PRODUITS =====
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  type     String?
+  products Product[]
+}
+
+model Product {
+  id           Int                  @id @default(autoincrement())
+  categoryId   Int
+  category     Category             @relation(fields: [categoryId], references: [id])
+  name         String
+  description  String?
+  price        Decimal
+  imageUrl     String?
+  isActive     Boolean              @default(true)
+  ingredients  ProductIngredient[]
+  orderItems   OrderItem[]
+}
+
+model ProductIngredient {
+  id           Int        @id @default(autoincrement())
+  productId    Int
+  product      Product    @relation(fields: [productId], references: [id])
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal
+}
+
+// ===== STOCKS =====
+
+model Ingredient {
+  id               Int                  @id @default(autoincrement())
+  name             String
+  unit             String
+  currentStock     Decimal              @default(0)
+  alertThreshold   Decimal              @default(0)
+  movements        StockMovement[]
+  productLinks     ProductIngredient[]
+  purchaseItems    PurchaseOrderItem[]
+}
+
+model StockMovement {
+  id           Int        @id @default(autoincrement())
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  userId       Int
+  type         String
+  quantity     Decimal
+  reason       String?
+  createdAt    DateTime   @default(now())
+}
+
+model Supplier {
+  id             Int             @id @default(autoincrement())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id         Int                 @id @default(autoincrement())
+  supplierId Int
+  supplier   Supplier            @relation(fields: [supplierId], references: [id])
+  createdBy  Int
+  status     String              @default("draft")
+  createdAt  DateTime            @default(now())
+  items      PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              Int           @id @default(autoincrement())
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  ingredientId    Int
+  ingredient      Ingredient    @relation(fields: [ingredientId], references: [id])
+  quantity        Decimal
+  unitPrice       Decimal?
+}
+
+// ===== CAISSE & PAIEMENTS =====
+
+model RestaurantTable {
+  id       Int     @id @default(autoincrement())
+  number   Int     @unique
+  capacity Int
+  status   String  @default("free")
+  orders   Order[]
+}
+
+model CashRegister {
+  id             Int       @id @default(autoincrement())
+  openedBy       Int
+  closedBy       Int?
+  openingAmount  Decimal
+  closingAmount  Decimal?
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  orders         Order[]
+}
+
+model Order {
+  id             Int             @id @default(autoincrement())
+  tableId        Int
+  table          RestaurantTable @relation(fields: [tableId], references: [id])
+  userId         Int
+  user           User            @relation(fields: [userId], references: [id])
+  cashRegisterId Int
+  cashRegister   CashRegister    @relation(fields: [cashRegisterId], references: [id])
+  status         String          @default("open")
+  notes          String?
+  createdAt      DateTime        @default(now())
+  closedAt       DateTime?
+  items          OrderItem[]
+  payments       Payment[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  unitPrice Decimal
+  notes     String?
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id])
+  amount    Decimal
+  method    String
+  createdAt DateTime @default(now())
+}

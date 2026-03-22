@@ -10,5 +10,8 @@
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:mobile": "npm run dev --workspace=apps/mobile"
+  },
+  "devDependencies": {
+    "dotenv": "^17.3.1"
   }
 }
