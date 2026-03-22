@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,195 +6,119 @@ datasource db {
   provider = "postgresql"
 }
 
-// ===== ROLES & USERS =====
-
-model Role {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  users User[]
-}
+// ===== UTILISATEURS =====
 
 model User {
-  id           Int        @id @default(autoincrement())
-  roleId       Int
-  role         Role       @relation(fields: [roleId], references: [id])
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
   firstName    String
   lastName     String
-  email        String     @unique
-  passwordHash String
+  restaurant   String?   // nom du restaurant
   phone        String?
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  schedules    Schedule[]
-  timeLogs     TimeLog[]
-  leaves       Leave[]
-  orders       Order[]
+  isActive     Boolean   @default(true)
+  plan         String    @default("free") // "free" | "pro"
+  createdAt    DateTime  @default(now())
+
+  ingredients  Ingredient[]
+  recipes      Recipe[]
+  invoices     Invoice[]
 }
 
-model Schedule {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  date      DateTime
-  startTime DateTime
-  endTime   DateTime
-}
-
-model TimeLog {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  user      User      @relation(fields: [userId], references: [id])
-  clockIn   DateTime
-  clockOut  DateTime?
-}
-
-model Leave {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  startDate DateTime
-  endDate   DateTime
-  type      String?
-  status    String   @default("pending")
-}
-
-// ===== MENU & PRODUITS =====
-
-model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  type     String?
-  products Product[]
-}
-
-model Product {
-  id           Int                  @id @default(autoincrement())
-  categoryId   Int
-  category     Category             @relation(fields: [categoryId], references: [id])
-  name         String
-  description  String?
-  price        Decimal
-  imageUrl     String?
-  isActive     Boolean              @default(true)
-  ingredients  ProductIngredient[]
-  orderItems   OrderItem[]
-}
-
-model ProductIngredient {
-  id           Int        @id @default(autoincrement())
-  productId    Int
-  product      Product    @relation(fields: [productId], references: [id])
-  ingredientId Int
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
-  quantity     Decimal
-}
-
-// ===== STOCKS =====
+// ===== INGREDIENTS =====
 
 model Ingredient {
-  id               Int                  @id @default(autoincrement())
-  name             String
-  unit             String
-  currentStock     Decimal              @default(0)
-  alertThreshold   Decimal              @default(0)
-  movements        StockMovement[]
-  productLinks     ProductIngredient[]
-  purchaseItems    PurchaseOrderItem[]
+  id           Int            @id @default(autoincrement())
+  userId       Int
+  user         User           @relation(fields: [userId], references: [id])
+  name         String         // "Beurre", "Saumon", "Farine"
+  unit         String         // "kg", "L", "pièce", "g"
+  currentPrice Decimal        @default(0) // prix actuel par unité
+  category     String?        // "viande", "poisson", "légume", "épice"...
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  recipeItems  RecipeItem[]
+  priceHistory PriceHistory[]
+  invoiceItems InvoiceItem[]
 }
 
-model StockMovement {
+// ===== HISTORIQUE DES PRIX =====
+
+model PriceHistory {
   id           Int        @id @default(autoincrement())
   ingredientId Int
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  price        Decimal    // prix à cette date
+  source       String     // "manual" | "invoice"
+  recordedAt   DateTime   @default(now())
+}
+
+// ===== RECETTES =====
+
+model Recipe {
+  id           Int          @id @default(autoincrement())
   userId       Int
-  type         String
-  quantity     Decimal
-  reason       String?
-  createdAt    DateTime   @default(now())
+  user         User         @relation(fields: [userId], references: [id])
+  name         String       // "Filet de saumon", "Burger maison"
+  category     String?      // "entrée", "plat", "dessert"
+  sellingPrice Decimal      // prix de vente TTC
+  vatRate      Decimal      @default(0.10) // TVA (10% par défaut)
+  isActive     Boolean      @default(true)
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  items        RecipeItem[]
 }
 
-model Supplier {
-  id             Int             @id @default(autoincrement())
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  purchaseOrders PurchaseOrder[]
+// ===== INGREDIENTS D'UNE RECETTE =====
+
+model RecipeItem {
+  id           Int        @id @default(autoincrement())
+  recipeId     Int
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal    // quantité en unité de l'ingrédient (ex: 0.200 kg)
+  notes        String?    // "pour la sauce", "garniture"
 }
 
-model PurchaseOrder {
-  id         Int                 @id @default(autoincrement())
-  supplierId Int
-  supplier   Supplier            @relation(fields: [supplierId], references: [id])
-  createdBy  Int
-  status     String              @default("draft")
-  createdAt  DateTime            @default(now())
-  items      PurchaseOrderItem[]
-}
+// ===== FACTURES =====
 
-model PurchaseOrderItem {
-  id              Int           @id @default(autoincrement())
-  purchaseOrderId Int
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  ingredientId    Int
-  ingredient      Ingredient    @relation(fields: [ingredientId], references: [id])
-  quantity        Decimal
-  unitPrice       Decimal?
-}
-
-// ===== CAISSE & PAIEMENTS =====
-
-model RestaurantTable {
-  id       Int     @id @default(autoincrement())
-  number   Int     @unique
-  capacity Int
-  status   String  @default("free")
-  orders   Order[]
-}
-
-model CashRegister {
-  id             Int       @id @default(autoincrement())
-  openedBy       Int
-  closedBy       Int?
-  openingAmount  Decimal
-  closingAmount  Decimal?
-  openedAt       DateTime  @default(now())
-  closedAt       DateTime?
-  orders         Order[]
-}
-
-model Order {
-  id             Int             @id @default(autoincrement())
-  tableId        Int
-  table          RestaurantTable @relation(fields: [tableId], references: [id])
+model Invoice {
+  id             Int           @id @default(autoincrement())
   userId         Int
-  user           User            @relation(fields: [userId], references: [id])
-  cashRegisterId Int
-  cashRegister   CashRegister    @relation(fields: [cashRegisterId], references: [id])
-  status         String          @default("open")
-  notes          String?
-  createdAt      DateTime        @default(now())
-  closedAt       DateTime?
-  items          OrderItem[]
-  payments       Payment[]
+  user           User          @relation(fields: [userId], references: [id])
+  supplierName   String?       // "Metro", "Transgourmet", "Bio Primeur"
+  invoiceDate    DateTime?     // date de la facture
+  totalAmount    Decimal?      // montant total de la facture
+  fileUrl        String?       // chemin vers le fichier uploadé
+  fileType       String?       // "pdf" | "image"
+  status         String        @default("pending")
+  // "pending"   → uploadée, en attente d'analyse
+  // "analyzing" → en cours d'analyse par l'IA
+  // "reviewed"  → analysée, en attente de validation
+  // "validated" → validée par l'utilisateur
+  // "error"     → erreur lors de l'analyse
+  rawAiResponse  String?       // réponse brute de l'IA (pour debug)
+  createdAt      DateTime      @default(now())
+
+  items          InvoiceItem[]
 }
 
-model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int     @default(1)
-  unitPrice Decimal
-  notes     String?
-}
+// ===== LIGNES D'UNE FACTURE =====
 
-model Payment {
-  id        Int      @id @default(autoincrement())
-  orderId   Int
-  order     Order    @relation(fields: [orderId], references: [id])
-  amount    Decimal
-  method    String
-  createdAt DateTime @default(now())
+model InvoiceItem {
+  id             Int         @id @default(autoincrement())
+  invoiceId      Int
+  invoice        Invoice     @relation(fields: [invoiceId], references: [id])
+  ingredientId   Int?        // null si l'IA n'a pas reconnu l'ingrédient
+  ingredient     Ingredient? @relation(fields: [ingredientId], references: [id])
+  rawName        String      // nom brut lu sur la facture "BEURRE DOUX 1KG"
+  quantity       Decimal?    // quantité sur la facture
+  unit           String?     // unité sur la facture
+  unitPrice      Decimal?    // prix unitaire extrait
+  totalPrice     Decimal?    // prix total de la ligne
+  isConfirmed    Boolean     @default(false) // validé par l'utilisateur
 }
