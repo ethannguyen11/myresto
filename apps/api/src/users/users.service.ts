@@ -11,10 +11,7 @@ export class UsersService {
   }
 
   async findById(id: number) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: { role: true },
-    })
+    return this.prisma.user.findUnique({ where: { id } })
   }
 
   async create(data: {
@@ -22,7 +19,7 @@ export class UsersService {
     password: string
     firstName: string
     lastName: string
-    roleId: number
+    restaurant?: string
     phone?: string
   }) {
     const passwordHash = await bcrypt.hash(data.password, 10)
@@ -32,7 +29,7 @@ export class UsersService {
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        roleId: data.roleId,
+        restaurant: data.restaurant,
         phone: data.phone,
       },
     })

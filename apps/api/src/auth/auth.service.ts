@@ -17,7 +17,7 @@ export class AuthService {
     const isValid = await bcrypt.compare(password, user.passwordHash)
     if (!isValid) throw new UnauthorizedException('Email ou mot de passe incorrect')
 
-    const payload = { sub: user.id, email: user.email, roleId: user.roleId }
+    const payload = { sub: user.id, email: user.email }
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -25,7 +25,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roleId: user.roleId,
+        plan: user.plan,
       },
     }
   }
