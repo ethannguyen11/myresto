@@ -1,3 +1,635 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '../api/client';
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type InvoiceStatus = 'pending' | 'analyzing' | 'reviewed' | 'validated' | 'error';
+
+interface Ingredient {
+  id: number;
+  name: string;
+  unit: string;
+}
+
+interface InvoiceItem {
+  id: number;
+  rawName: string;
+  quantity: number | null;
+  unit: string | null;
+  unitPrice: number | null;
+  totalPrice: number | null;
+  isConfirmed: boolean;
+  ingredientId: number | null;
+  ingredient: Ingredient | null;
+}
+
+interface Invoice {
+  id: number;
+  supplierName: string | null;
+  invoiceDate: string | null;
+  totalAmount: number | null;
+  status: InvoiceStatus;
+  fileType: string | null;
+  createdAt: string;
+  items: InvoiceItem[];
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
+function fmt(n: number | null, dec = 2): string {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toFixed(dec).replace('.', ',');
+}
+
+// ── Status badge ───────────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  pending:   'En attente',
+  analyzing: 'Analyse IA…',
+  reviewed:  'À valider',
+  validated: 'Validée',
+  error:     'Erreur',
+};
+
+const STATUS_CLS: Record<InvoiceStatus, string> = {
+  pending:   'bg-stone-100 text-stone-500',
+  analyzing: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200',
+  reviewed:  'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  validated: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  error:     'bg-red-50 text-red-600 ring-1 ring-red-200',
+};
+
+function StatusBadge({ status }: { status: InvoiceStatus }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLS[status]}`}>
+      {status === 'analyzing' && (
+        <span className="h-1.5 w-1.5 animate-ping rounded-full bg-amber-500" />
+      )}
+      {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+// ── Modal shell ────────────────────────────────────────────────────────────
+
+function Modal({
+  title,
+  onClose,
+  children,
+  wide,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div
+      ref={ref}
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-12 backdrop-blur-sm"
+      onMouseDown={(e) => { if (e.target === ref.current) onClose(); }}
+    >
+      <div className={`w-full ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl`}>
+        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+          <h2 className="text-sm font-semibold text-stone-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Upload zone ────────────────────────────────────────────────────────────
+
+function UploadZone({ onUploaded }: { onUploaded: () => void }) {
+  const [dragging, setDragging] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [statusMsg, setStatusMsg] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    setError('');
+    setProgress(0);
+    setStatusMsg('Envoi du fichier…');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await api.post('/invoices/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
+        },
+      });
+      setStatusMsg('Fichier envoyé — analyse IA en cours…');
+      setTimeout(() => {
+        setProgress(null);
+        setStatusMsg('');
+        onUploaded();
+      }, 1500);
+    } catch (err: any) {
+      console.error('[InvoicesPage] upload', err);
+      setError(err.response?.data?.message ?? 'Échec de l\'envoi.');
+      setProgress(null);
+      setStatusMsg('');
+    }
+  }
+
+  function handleFiles(files: FileList | null) {
+    if (!files?.length) return;
+    const file = files[0];
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type) && !/\.(pdf|jpe?g|png|webp)$/i.test(file.name)) {
+      setError('Format non supporté. Utilisez PDF, JPEG ou PNG.');
+      return;
+    }
+    upload(file);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    handleFiles(e.dataTransfer.files);
+  }
+
+  const busy = progress !== null;
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="border-b border-stone-100 px-5 py-4">
+        <h2 className="text-sm font-semibold text-stone-700">Importer une facture</h2>
+        <p className="mt-0.5 text-xs text-stone-400">PDF, JPEG ou PNG · 10 Mo max</p>
+      </div>
+      <div className="p-5">
+        {/* Drop area */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          onClick={() => !busy && inputRef.current?.click()}
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors
+            ${busy ? 'cursor-default' : 'hover:border-emerald-400 hover:bg-emerald-50/50'}
+            ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300 bg-stone-50'}`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+
+          {busy ? (
+            <div className="w-full max-w-xs space-y-3">
+              <p className="text-sm font-medium text-stone-700">{statusMsg}</p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200">
+                <div
+                  className="h-2 rounded-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-stone-400">{progress}%</p>
+            </div>
+          ) : (
+            <>
+              <span className="text-4xl">🧾</span>
+              <p className="mt-3 text-sm font-medium text-stone-700">
+                Glissez une facture ici ou{' '}
+                <span className="text-emerald-600 underline underline-offset-2">parcourir</span>
+              </p>
+              <p className="mt-1 text-xs text-stone-400">
+                L'IA extrait automatiquement les lignes et met à jour vos prix ingrédients
+              </p>
+            </>
+          )}
+        </div>
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Validation modal ───────────────────────────────────────────────────────
+
+function ValidationModal({
+  invoice,
+  ingredients,
+  onClose,
+  onValidated,
+}: {
+  invoice: Invoice;
+  ingredients: Ingredient[];
+  onClose: () => void;
+  onValidated: () => void;
+}) {
+  // Map itemId → selected ingredientId (string for select, '' = null)
+  const [selections, setSelections] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    for (const item of invoice.items) {
+      init[item.id] = item.ingredientId ? String(item.ingredientId) : '';
+    }
+    return init;
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const unconfirmed = invoice.items.filter((i) => !i.isConfirmed);
+
+  async function handleValidate() {
+    setError('');
+    setSubmitting(true);
+    try {
+      const items = unconfirmed.map((item) => ({
+        itemId: item.id,
+        ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null,
+      }));
+      await api.post(`/invoices/${invoice.id}/validate-items`, { items });
+      onValidated();
+      onClose();
+    } catch (err: any) {
+      console.error('[InvoicesPage] validate-items', err);
+      setError(err.response?.data?.message ?? 'Erreur lors de la validation.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Valider — ${invoice.supplierName ?? `Facture #${invoice.id}`}`} wide onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-stone-500">
+          Associez chaque ligne extraite par l'IA à un ingrédient de votre catalogue.
+          Les prix seront mis à jour automatiquement après confirmation.
+        </p>
+
+        {error && (
+          <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</div>
+        )}
+
+        {/* Column headers */}
+        <div className="grid grid-cols-[1fr_80px_80px_1fr] gap-2 border-b border-stone-100 pb-2 text-xs font-medium uppercase tracking-wide text-stone-400">
+          <span>Nom extrait</span>
+          <span className="text-right">Qté</span>
+          <span className="text-right">Prix unit.</span>
+          <span>Associer à</span>
+        </div>
+
+        {/* Items */}
+        <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
+          {unconfirmed.length === 0 ? (
+            <li className="py-4 text-center text-sm text-stone-400">
+              Toutes les lignes sont déjà confirmées.
+            </li>
+          ) : (
+            unconfirmed.map((item) => (
+              <li
+                key={item.id}
+                className="grid grid-cols-[1fr_80px_80px_1fr] items-center gap-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5"
+              >
+                {/* Raw name */}
+                <span className="truncate text-sm font-medium text-stone-800" title={item.rawName}>
+                  {item.rawName}
+                  {item.unit && (
+                    <span className="ml-1 text-xs text-stone-400">({item.unit})</span>
+                  )}
+                </span>
+
+                {/* Quantity */}
+                <span className="text-right text-sm text-stone-600">
+                  {item.quantity !== null ? fmt(item.quantity, 3).replace(/,?0+$/, '') : '—'}
+                </span>
+
+                {/* Unit price */}
+                <span className="text-right text-sm text-stone-600">
+                  {item.unitPrice !== null ? `${fmt(item.unitPrice)} €` : '—'}
+                </span>
+
+                {/* Ingredient selector */}
+                <select
+                  value={selections[item.id] ?? ''}
+                  onChange={(e) =>
+                    setSelections((s) => ({ ...s, [item.id]: e.target.value }))
+                  }
+                  className="rounded-lg border border-stone-300 px-2 py-1.5 text-xs text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="">— Ignorer —</option>
+                  {ingredients.map((ing) => (
+                    <option key={ing.id} value={ing.id}>
+                      {ing.name} ({ing.unit})
+                    </option>
+                  ))}
+                </select>
+              </li>
+            ))
+          )}
+        </ul>
+
+        {/* Already confirmed */}
+        {invoice.items.some((i) => i.isConfirmed) && (
+          <p className="text-xs text-stone-400">
+            {invoice.items.filter((i) => i.isConfirmed).length} ligne(s) déjà confirmée(s)
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleValidate}
+            disabled={submitting || unconfirmed.length === 0}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {submitting ? 'Validation…' : `Confirmer ${unconfirmed.length} ligne${unconfirmed.length !== 1 ? 's' : ''}`}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────
+
+type ActiveModal =
+  | { type: 'validate'; invoice: Invoice }
+  | { type: 'delete'; invoice: Invoice };
+
 export function InvoicesPage() {
-  return <div>Factures — à venir</div>;
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<ActiveModal | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const load = useCallback(async (silent = false) => {
+    try {
+      const [invRes, ingRes] = await Promise.all([
+        api.get<Invoice[]>('/invoices'),
+        api.get<Ingredient[]>('/ingredients'),
+      ]);
+      setInvoices(invRes.data);
+      setIngredients(ingRes.data);
+    } catch (err: any) {
+      console.error('[InvoicesPage] load', err);
+      if (!silent) setError(err.response?.data?.message ?? 'Impossible de charger les factures.');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Poll every 4s while any invoice is analyzing
+  useEffect(() => {
+    const hasAnalyzing = invoices.some(
+      (inv) => inv.status === 'pending' || inv.status === 'analyzing',
+    );
+
+    if (hasAnalyzing && !pollRef.current) {
+      pollRef.current = setInterval(() => load(true), 4000);
+    } else if (!hasAnalyzing && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    };
+  }, [invoices, load]);
+
+  async function handleAnalyze(invoice: Invoice) {
+    try {
+      await api.post(`/invoices/${invoice.id}/analyze`);
+      await load(true);
+    } catch (err: any) {
+      console.error('[InvoicesPage] analyze', err);
+    }
+  }
+
+  async function handleDelete(invoice: Invoice) {
+    try {
+      await api.delete(`/invoices/${invoice.id}`);
+      setModal(null);
+      await load(true);
+    } catch (err: any) {
+      console.error('[InvoicesPage] delete', err);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700">
+        {error}
+      </div>
+    );
+  }
+
+  const validated = invoices.filter((i) => i.status === 'validated').length;
+  const toReview  = invoices.filter((i) => i.status === 'reviewed').length;
+
+  return (
+    <>
+      <div className="space-y-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-stone-900">Factures</h1>
+            <p className="mt-0.5 text-sm text-stone-500">
+              {invoices.length} facture{invoices.length !== 1 ? 's' : ''}
+              {toReview > 0 && (
+                <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                  {toReview} à valider
+                </span>
+              )}
+            </p>
+          </div>
+          {invoices.length > 0 && (
+            <div className="flex gap-4 text-right">
+              <div>
+                <p className="text-xs text-stone-400">Validées</p>
+                <p className="text-lg font-semibold text-emerald-600">{validated}</p>
+              </div>
+              <div>
+                <p className="text-xs text-stone-400">Total importées</p>
+                <p className="text-lg font-semibold text-stone-800">{invoices.length}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Upload zone */}
+        <UploadZone onUploaded={() => load(true)} />
+
+        {/* Invoice list */}
+        {invoices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center">
+            <span className="text-4xl">📂</span>
+            <p className="mt-3 text-sm font-medium text-stone-700">Aucune facture importée</p>
+            <p className="mt-1 text-xs text-stone-400">
+              Glissez un fichier dans la zone ci-dessus pour commencer.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+            <div className="border-b border-stone-100 px-5 py-4">
+              <h2 className="text-sm font-semibold text-stone-700">Historique des factures</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
+                    <th className="px-5 py-3">Fournisseur</th>
+                    <th className="px-5 py-3">Date facture</th>
+                    <th className="px-5 py-3">Importée le</th>
+                    <th className="px-5 py-3 text-right">Montant</th>
+                    <th className="px-5 py-3 text-center">Lignes</th>
+                    <th className="px-5 py-3">Statut</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {invoices.map((inv) => (
+                    <tr key={inv.id} className="group hover:bg-stone-50">
+                      {/* Supplier */}
+                      <td className="px-5 py-3">
+                        <span className="font-medium text-stone-800">
+                          {inv.supplierName ?? (
+                            <span className="text-stone-400 italic">Analyse en cours…</span>
+                          )}
+                        </span>
+                      </td>
+
+                      {/* Invoice date */}
+                      <td className="px-5 py-3 text-stone-500">{fmtDate(inv.invoiceDate)}</td>
+
+                      {/* Import date */}
+                      <td className="px-5 py-3 text-xs text-stone-400">{fmtDate(inv.createdAt)}</td>
+
+                      {/* Total */}
+                      <td className="px-5 py-3 text-right font-semibold text-stone-800">
+                        {inv.totalAmount !== null ? `${fmt(inv.totalAmount)} €` : '—'}
+                      </td>
+
+                      {/* Item count */}
+                      <td className="px-5 py-3 text-center">
+                        {inv.items.length > 0 ? (
+                          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">
+                            {inv.items.length}
+                          </span>
+                        ) : (
+                          <span className="text-stone-300">—</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-3">
+                        <StatusBadge status={inv.status} />
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {inv.status === 'reviewed' && (
+                            <button
+                              onClick={() => setModal({ type: 'validate', invoice: inv })}
+                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
+                            >
+                              Valider
+                            </button>
+                          )}
+                          {inv.status === 'error' && (
+                            <button
+                              onClick={() => handleAnalyze(inv)}
+                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50"
+                            >
+                              Réanalyser
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setModal({ type: 'delete', invoice: inv })}
+                            disabled={inv.status === 'analyzing'}
+                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Modals ── */}
+      {modal?.type === 'validate' && (
+        <ValidationModal
+          invoice={modal.invoice}
+          ingredients={ingredients}
+          onClose={() => setModal(null)}
+          onValidated={() => load(true)}
+        />
+      )}
+
+      {modal?.type === 'delete' && (
+        <Modal title="Confirmer la suppression" onClose={() => setModal(null)}>
+          <p className="text-sm text-stone-600">
+            Supprimer la facture{' '}
+            <span className="font-semibold text-stone-900">
+              {modal.invoice.supplierName ?? `#${modal.invoice.id}`}
+            </span>{' '}
+            et toutes ses lignes ? Cette action est irréversible.
+          </p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => handleDelete(modal.invoice)}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            >
+              Supprimer définitivement
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
 }
