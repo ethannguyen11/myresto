@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/ingredients', label: 'Ingrédients', icon: '🥕' },
   { to: '/recipes', label: 'Recettes', icon: '👨‍🍳' },
   { to: '/invoices', label: 'Factures', icon: '🧾' },
+  { to: '/advisor', label: 'Conseiller IA', icon: '🤖' },
 ] as const;
 
 export function DashboardLayout() {

@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { AdvisorPage } from './pages/AdvisorPage';
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
           { path: 'ingredients', element: <IngredientsPage /> },
           { path: 'recipes', element: <RecipesPage /> },
           { path: 'invoices', element: <InvoicesPage /> },
+          { path: 'advisor', element: <AdvisorPage /> },
         ],
       },
     ],

@@ -7,5 +7,6 @@ import { RecipesModule } from '../recipes/recipes.module'
   imports: [RecipesModule],
   controllers: [DashboardController],
   providers: [DashboardService],
+  exports: [DashboardService],
 })
 export class DashboardModule {}
