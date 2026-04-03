@@ -237,6 +237,175 @@ function ReportSection({
   );
 }
 
+// ── Simulation section ─────────────────────────────────────────────────────
+
+interface SimRecipe {
+  name: string;
+  category: string | null;
+  currentFoodCost: number;
+  currentSellingPrice: number;
+  totalIngredientCost: number;
+  requiredSellingPrice: number | null;
+  priceDelta: number | null;
+  mostImpactfulIngredient: { name: string; lineCost: number; quantity: number; unit: string } | null;
+}
+
+interface SimulationResult {
+  currentAvgFoodCost: number;
+  targetFoodCost: number;
+  suggestions: string;
+  recipes: SimRecipe[];
+}
+
+function SimulationSection() {
+  const [target, setTarget] = useState(30);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<SimulationResult | null>(null);
+
+  async function handleSimulate() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post<SimulationResult>('/advisor/simulate', { targetFoodCost: target });
+      setResult(res.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message ?? 'Impossible de lancer la simulation.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+      {/* Header */}
+      <div className="border-b border-stone-100 px-5 py-4">
+        <h2 className="text-sm font-semibold text-stone-900">Simulation de menu</h2>
+        <p className="mt-0.5 text-xs text-stone-500">
+          Identifiez les recettes hors cible et obtenez des ajustements concrets pour atteindre votre food cost idéal.
+        </p>
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-wrap items-end gap-4 px-5 py-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-stone-600">Food cost cible</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={target}
+              onChange={(e) => setTarget(Math.max(1, Math.min(100, Number(e.target.value))))}
+              className="w-20 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            />
+            <span className="text-sm text-stone-500">%</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSimulate}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {loading ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Simulation…
+            </>
+          ) : (
+            '🎯 Simuler'
+          )}
+        </button>
+      </div>
+
+      {/* Results */}
+      {(error || result) && (
+        <div className="border-t border-stone-100 px-5 py-4 space-y-5">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <>
+              {/* KPIs */}
+              <div className="flex flex-wrap gap-3">
+                <div className="flex-1 min-w-32 rounded-lg bg-stone-50 px-4 py-3">
+                  <p className="text-xs text-stone-500">Food cost moyen actuel</p>
+                  <p className="mt-0.5 text-xl font-semibold text-stone-900">{result.currentAvgFoodCost}%</p>
+                </div>
+                <div className="flex-1 min-w-32 rounded-lg bg-emerald-50 px-4 py-3">
+                  <p className="text-xs text-emerald-700">Objectif cible</p>
+                  <p className="mt-0.5 text-xl font-semibold text-emerald-700">{result.targetFoodCost}%</p>
+                </div>
+                <div className="flex-1 min-w-32 rounded-lg bg-orange-50 px-4 py-3">
+                  <p className="text-xs text-orange-700">Recettes non conformes</p>
+                  <p className="mt-0.5 text-xl font-semibold text-orange-700">{result.recipes.length}</p>
+                </div>
+              </div>
+
+              {/* Non-compliant recipes table */}
+              {result.recipes.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-stone-600">Recettes hors cible</p>
+                  <div className="overflow-x-auto rounded-lg border border-stone-200">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-stone-200 bg-stone-50">
+                          <th className="px-3 py-2 text-left font-medium text-stone-600">Recette</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">FC actuel</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">Prix actuel</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">Prix cible</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">Δ prix</th>
+                          <th className="px-3 py-2 text-left font-medium text-stone-600">Ingrédient clé</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.recipes.map((r) => (
+                          <tr key={r.name} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                            <td className="px-3 py-2 font-medium text-stone-800">{r.name}</td>
+                            <td className="px-3 py-2 text-right text-orange-600 font-medium">{r.currentFoodCost}%</td>
+                            <td className="px-3 py-2 text-right text-stone-600">{r.currentSellingPrice}€</td>
+                            <td className="px-3 py-2 text-right text-emerald-700 font-medium">
+                              {r.requiredSellingPrice != null ? `${r.requiredSellingPrice}€` : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {r.priceDelta != null ? (
+                                <span className={r.priceDelta > 0 ? 'text-blue-600' : 'text-stone-500'}>
+                                  {r.priceDelta > 0 ? '+' : ''}{r.priceDelta}€
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {r.mostImpactfulIngredient
+                                ? `${r.mostImpactfulIngredient.name} (${r.mostImpactfulIngredient.lineCost.toFixed(2)}€)`
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* AI suggestions */}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+                  ✨ Recommandations IA
+                </p>
+                <div className="space-y-0.5">{renderMarkdown(result.suggestions)}</div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function AdvisorPage() {
@@ -245,6 +414,10 @@ export function AdvisorPage() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState('');
+
+  // PDF download state
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState('');
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -259,6 +432,26 @@ export function AdvisorPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, chatLoading]);
+
+  async function handleDownloadPdf() {
+    setPdfLoading(true);
+    setPdfError('');
+    try {
+      const res = await api.get('/advisor/report/pdf', { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      const disposition: string = res.headers['content-disposition'] ?? '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      a.href = url;
+      a.download = match ? match[1] : 'rapport-chef-ia.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setPdfError('Impossible de générer le rapport PDF.');
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   async function handleGenerateReport() {
     setReportLoading(true);
@@ -317,11 +510,30 @@ export function AdvisorPage() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-stone-900">Conseiller IA</h1>
-        <p className="mt-0.5 text-sm text-stone-500">
-          Analyse intelligente de votre rentabilité et recommandations personnalisées
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-stone-900">Conseiller IA</h1>
+          <p className="mt-0.5 text-sm text-stone-500">
+            Analyse intelligente de votre rentabilité et recommandations personnalisées
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+            className="flex items-center gap-2 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition-colors hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-60"
+          >
+            {pdfLoading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-stone-400 border-t-transparent" />
+                Génération PDF…
+              </>
+            ) : (
+              '📄 Télécharger le rapport mensuel PDF'
+            )}
+          </button>
+          {pdfError && <p className="text-xs text-red-600">{pdfError}</p>}
+        </div>
       </div>
 
       {/* Report */}
@@ -332,6 +544,9 @@ export function AdvisorPage() {
         error={reportError}
         onGenerate={handleGenerateReport}
       />
+
+      {/* Simulation */}
+      <SimulationSection />
 
       {/* Divider */}
       <div className="relative">

@@ -65,7 +65,7 @@ export class ClaudeVisionService {
             fileContent,
             {
               type: 'text',
-              text: `Tu es un assistant spécialisé dans l'analyse de factures fournisseurs pour la restauration.
+              text: `Tu es un assistant spécialisé dans l'analyse de factures fournisseurs pour la restauration. The invoice may be in French or English. Extract all information regardless of language and always return the JSON response in the same format.
 
 Analyse cette facture et extrait les informations suivantes au format JSON strict :
 

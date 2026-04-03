@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -62,6 +63,102 @@ function alertIcon(alert: string): string {
 
 function fmt(n: number, decimals = 2): string {
   return n.toFixed(decimals).replace('.', ',');
+}
+
+// ── Weekly alert banner ────────────────────────────────────────────────────
+
+type AlertSeverity = 'info' | 'warning' | 'critical';
+
+interface WeeklyAlertData {
+  alert: string;
+  generatedAt: string;
+  severity: AlertSeverity;
+}
+
+function WeeklyAlertBanner() {
+  const navigate = useNavigate();
+  const [data, setData] = useState<WeeklyAlertData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    api.get<WeeklyAlertData>('/advisor/weekly-alert')
+      .then((res) => setData(res.data))
+      .catch(() => { /* silently skip — non-critical */ })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data || dismissed) return null;
+
+  const styles: Record<AlertSeverity, { wrapper: string; dot: string; label: string; btn: string }> = {
+    info: {
+      wrapper: 'border-emerald-200 bg-emerald-50',
+      dot: 'bg-emerald-500',
+      label: 'text-emerald-800',
+      btn: 'border-emerald-300 text-emerald-700 hover:bg-emerald-100',
+    },
+    warning: {
+      wrapper: 'border-amber-200 bg-amber-50',
+      dot: 'bg-amber-500',
+      label: 'text-amber-800',
+      btn: 'border-amber-300 text-amber-700 hover:bg-amber-100',
+    },
+    critical: {
+      wrapper: 'border-red-200 bg-red-50',
+      dot: 'bg-red-500',
+      label: 'text-red-800',
+      btn: 'border-red-300 text-red-700 hover:bg-red-100',
+    },
+  };
+
+  const s = styles[data.severity];
+  const icon = data.severity === 'critical' ? '🚨' : data.severity === 'warning' ? '⚠️' : '📊';
+  const severityLabel =
+    data.severity === 'critical' ? 'Alerte critique' :
+    data.severity === 'warning' ? 'Attention' : 'Alerte hebdomadaire';
+
+  return (
+    <div className={`rounded-xl border px-5 py-4 ${s.wrapper}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 text-xl leading-none">{icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex h-2 w-2 rounded-full ${s.dot}`} />
+              <span className={`text-xs font-semibold uppercase tracking-wide ${s.label}`}>
+                {severityLabel}
+              </span>
+            </div>
+            <p className={`mt-1.5 text-sm leading-relaxed ${s.label}`}>{data.alert}</p>
+            <p className="mt-1 text-xs opacity-60" style={{ color: 'inherit' }}>
+              Généré le{' '}
+              {new Date(data.generatedAt).toLocaleDateString('fr-FR', {
+                day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
+              })}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => navigate('/advisor')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${s.btn}`}
+          >
+            Voir les détails →
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-600"
+            title="Fermer"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -177,6 +274,9 @@ export function DashboardPage() {
           Vue globale de la rentabilité de votre menu
         </p>
       </div>
+
+      {/* ── Alerte hebdomadaire ── */}
+      <WeeklyAlertBanner />
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

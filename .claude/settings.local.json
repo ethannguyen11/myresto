@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(EXPO_ROUTER_APP_ROOT=./app npx expo export --platform android)",
+      "Bash(find C:/Users/ethan/myresto/node_modules/metro -name *.js)",
+      "Bash(xargs grep:*)",
+      "Bash(rm -rf node_modules/.cache .expo)",
+      "Bash(npx expo:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(node:*)"
+    ]
+  }
+}
