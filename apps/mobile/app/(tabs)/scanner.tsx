@@ -12,10 +12,15 @@ import {
 } from 'react-native';
 import { api } from '../../src/api/client';
 
-// expo-image-picker is not supported on web — load it only on native
-const ImagePicker = Platform.OS !== 'web'
-  ? require('expo-image-picker')
-  : null;
+// expo-image-picker and expo-camera are native-only.
+// The if-block (not ternary) lets babel-preset-expo replace Platform.OS with
+// the literal 'web' at build time, allowing Metro to dead-code-eliminate this.
+let ImagePicker: any = null;
+let Camera: any = null;
+if (Platform.OS !== 'web') {
+  ImagePicker = require('expo-image-picker');
+  Camera = require('expo-camera');
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -51,10 +56,10 @@ function WebFallback() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.webFallback}>
         <Text style={styles.webEmoji}>📸</Text>
-        <Text style={styles.webTitle}>Fonctionnalité mobile</Text>
+        <Text style={styles.webTitle}>Scanner disponible sur l'app mobile</Text>
         <Text style={styles.webText}>
-          La caméra est disponible uniquement sur l'app mobile.{'\n'}
-          Utilisez la version iPhone / Android pour scanner vos factures.
+          Téléchargez l'app Chef IA sur votre iPhone ou Android{'\n'}
+          pour scanner vos factures directement depuis l'appareil photo.
         </Text>
       </View>
     </SafeAreaView>

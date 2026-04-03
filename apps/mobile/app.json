@@ -25,7 +25,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.chefai.mobile",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -38,6 +42,12 @@
       "expo-asset",
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aa601b33-dec3-4b12-9433-b0e7c48e224b"
+      }
+    }
   }
 }

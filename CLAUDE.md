@@ -80,3 +80,9 @@ JWT payload: `{ sub: userId, email }`. The `JwtStrategy` validates the token and
 ### Uploaded files
 
 Factures uploadées stockées dans `apps/api/uploads/invoices/` (créé automatiquement au démarrage). Formats acceptés : PDF, JPEG, PNG, WEBP. Limite : 10 Mo.
+
+## Mode de travail
+- Travaille de manière fluide et enchaîne les étapes sans attendre de validation intermédiaire
+- Exécute les commandes shell nécessaires directement
+- Teste toujours que le build compile après chaque modification
+- Ne t'arrête que si tu rencontres une erreur vraiment bloquante
