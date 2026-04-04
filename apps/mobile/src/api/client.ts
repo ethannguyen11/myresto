@@ -1,16 +1,13 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
 // Production: public API once deployed
 // Development — Android emulator: host machine is 10.0.2.2
 //             — iOS simulator / web: localhost resolves to host machine
 const BASE_URL = __DEV__
-  ? Platform.OS === 'android'
-    ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000'
-  : 'https://api.chefai.fr'; // URL de production future
+  ? 'http://192.168.0.6:3000'  // IP locale du PC sur le réseau WiFi
+  : 'https://api.chefai.fr';    // URL de production
 
 export const api = axios.create({
   baseURL: BASE_URL,
