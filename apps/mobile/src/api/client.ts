@@ -3,15 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
-// Web: direct to localhost:3000 (CORS allowed in API for localhost:8083)
-// Android emulator: host machine is accessible via 10.0.2.2
-// iOS simulator / native: localhost resolves to host machine
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3000'
-    : Platform.OS === 'android'
+// Production: public API once deployed
+// Development — Android emulator: host machine is 10.0.2.2
+//             — iOS simulator / web: localhost resolves to host machine
+const BASE_URL = __DEV__
+  ? Platform.OS === 'android'
     ? 'http://10.0.2.2:3000'
-    : 'http://localhost:3000';
+    : 'http://localhost:3000'
+  : 'https://api.chefai.fr'; // URL de production future
 
 export const api = axios.create({
   baseURL: BASE_URL,
