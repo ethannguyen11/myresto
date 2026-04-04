@@ -1,0 +1,280 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "ingredients": "Ingredients",
+    "recipes": "Recipes",
+    "invoices": "Invoices",
+    "advisor": "AI Advisor",
+    "logout": "Logout"
+  },
+  "lang": {
+    "switch": "FR",
+    "flag": "🇫🇷"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteForever": "Delete permanently",
+    "confirmDelete": "Confirm deletion",
+    "edit": "Edit",
+    "validate": "Validate",
+    "error": "An error occurred.",
+    "generatedOn": "Generated on",
+    "generating": "Generating…",
+    "loading": "Loading…"
+  },
+  "login": {
+    "tagline": "Log in to manage your profitability",
+    "email": "Email",
+    "emailPlaceholder": "chef@myrestaurant.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Log in",
+    "submitting": "Logging in…",
+    "error": "Incorrect credentials. Please try again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Global overview of your menu profitability",
+    "kpi": {
+      "totalRecipes": "Total recipes",
+      "rentableSub": "{{rentable}} profitable · {{nonRentable}} to review",
+      "avgFoodCost": "Average food cost",
+      "fcExcellent": "Excellent",
+      "fcCorrect": "Good",
+      "fcImprove": "Needs improvement",
+      "rentableRatio": "Profitable vs non-profitable",
+      "ratioSub": "{{pct}}% of menu",
+      "profit": "Potential profit / service",
+      "profitSub": "Sum of gross margins"
+    },
+    "alerts": {
+      "title": "Smart alerts"
+    },
+    "tables": {
+      "topProfitable": "Top 3 — Best margins",
+      "topExpensive": "Top 3 — Highest food cost",
+      "recipe": "Recipe",
+      "category": "Category",
+      "sellingPrice": "Selling price",
+      "foodCost": "Food cost",
+      "margin": "Margin / dish"
+    },
+    "priceEvolution": {
+      "title": "Ingredient price evolution"
+    },
+    "weekly": {
+      "critical": "Critical alert",
+      "warning": "Warning",
+      "info": "Weekly alert",
+      "seeDetails": "See details →",
+      "generatedOn": "Generated on"
+    }
+  },
+  "ingredients": {
+    "title": "Ingredients",
+    "subtitle_one": "{{count}} ingredient in catalog",
+    "subtitle_other": "{{count}} ingredients in catalog",
+    "add": "Add ingredient",
+    "empty": {
+      "title": "No ingredients",
+      "desc": "Add your first ingredient to get started."
+    },
+    "table": {
+      "name": "Name",
+      "category": "Category",
+      "unit": "Unit",
+      "currentPrice": "Current price",
+      "updatedAt": "Updated"
+    },
+    "form": {
+      "addTitle": "Add ingredient",
+      "editTitle": "Edit — {{name}}",
+      "name": "Name *",
+      "namePlaceholder": "e.g. AOP Butter",
+      "unit": "Unit *",
+      "unitPlaceholder": "kg, L, piece…",
+      "price": "Current price (€) *",
+      "pricePlaceholder": "0.00",
+      "category": "Category",
+      "categoryPlaceholder": "e.g. Meat, Vegetables, Grocery…"
+    },
+    "history": {
+      "title": "History — {{name}}",
+      "empty": "No history available.",
+      "chartLabel": "Price evolution (€ / {{unit}})",
+      "invoice": "invoice",
+      "manual": "manual"
+    },
+    "delete": {
+      "message": "Delete {{name}}? This action is irreversible and will delete the associated price history."
+    },
+    "loadError": "Unable to load ingredients."
+  },
+  "recipes": {
+    "title": "Recipes",
+    "subtitle_one": "{{count}} recipe on the menu",
+    "subtitle_other": "{{count}} recipes on the menu",
+    "add": "New recipe",
+    "empty": {
+      "title": "No recipes",
+      "desc": "Create your first recipe to calculate your food cost.",
+      "cta": "Create a recipe"
+    },
+    "table": {
+      "recipe": "Recipe",
+      "category": "Category",
+      "sellingPrice": "Selling price",
+      "totalCost": "Total cost",
+      "foodCost": "Food cost",
+      "margin": "Margin / dish",
+      "status": "Status",
+      "ingredientCount_one": "{{count}} ingredient",
+      "ingredientCount_other": "{{count}} ingredients"
+    },
+    "summary": {
+      "avgFoodCost": "Average food cost",
+      "rentable": "Profitable recipes",
+      "rentabilityRate": "Profitability rate",
+      "totalProfit": "Total profit / service"
+    },
+    "form": {
+      "createTitle": "New recipe",
+      "editTitle": "Edit — {{name}}",
+      "recipeName": "Recipe name *",
+      "recipeNamePlaceholder": "e.g. Duck breast with cherry sauce",
+      "category": "Category",
+      "categoryPlaceholder": "Starter, Main, Dessert…",
+      "sellingPrice": "Selling price incl. VAT (€) *",
+      "ingredients": "Ingredients *",
+      "addIngredient": "Add",
+      "chooseIngredient": "— Choose an ingredient —",
+      "qtyPlaceholder": "Qty",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Preparation tips, allergens…",
+      "saveRecipe": "Save recipe",
+      "atLeastOne": "Add at least one ingredient with a quantity."
+    },
+    "preview": {
+      "cost": "Ingredient cost",
+      "foodCost": "Food cost",
+      "margin": "Margin / dish"
+    },
+    "delete": {
+      "message": "Delete recipe {{name}}? This action is irreversible."
+    },
+    "loadError": "Unable to load recipes."
+  },
+  "invoices": {
+    "title": "Invoices",
+    "subtitle_one": "{{count}} invoice",
+    "subtitle_other": "{{count}} invoices",
+    "toValidate_one": "{{count}} to validate",
+    "toValidate_other": "{{count}} to validate",
+    "validated": "Validated",
+    "totalImported": "Total imported",
+    "upload": {
+      "title": "Import an invoice",
+      "formats": "PDF, JPEG or PNG · 10 MB max",
+      "dropLabel": "Drag an invoice here or",
+      "browse": "browse",
+      "aiDesc": "AI automatically extracts lines and updates your ingredient prices",
+      "uploading": "Uploading file…",
+      "sent": "File sent — AI analysis in progress…",
+      "failed": "Upload failed.",
+      "invalidFormat": "Unsupported format. Use PDF, JPEG or PNG."
+    },
+    "status": {
+      "pending": "Pending",
+      "analyzing": "AI Analysis…",
+      "reviewed": "To validate",
+      "validated": "Validated",
+      "error": "Error"
+    },
+    "table": {
+      "supplier": "Supplier",
+      "invoiceDate": "Invoice date",
+      "importedOn": "Imported on",
+      "amount": "Amount",
+      "lines": "Lines",
+      "status": "Status",
+      "analyzing": "Analysis in progress…"
+    },
+    "history": "Invoice history",
+    "reanalyze": "Re-analyze",
+    "empty": {
+      "title": "No invoices imported",
+      "desc": "Drag a file into the zone above to get started."
+    },
+    "validation": {
+      "title": "Validate — {{supplier}}",
+      "desc": "Link each line extracted by AI to an ingredient in your catalog. Prices will be updated automatically after confirmation.",
+      "colExtracted": "Extracted name",
+      "colQty": "Qty",
+      "colUnitPrice": "Unit price",
+      "colLink": "Link to",
+      "allConfirmed": "All lines are already confirmed.",
+      "alreadyConfirmed_one": "{{count}} line already confirmed",
+      "alreadyConfirmed_other": "{{count}} lines already confirmed",
+      "ignore": "— Ignore —",
+      "confirm_one": "Confirm {{count}} line",
+      "confirm_other": "Confirm {{count}} lines",
+      "confirming": "Validating…",
+      "error": "Error during validation."
+    },
+    "delete": {
+      "message": "Delete invoice {{name}} and all its lines? This action is irreversible."
+    },
+    "loadError": "Unable to load invoices."
+  },
+  "advisor": {
+    "title": "AI Advisor",
+    "subtitle": "Intelligent analysis of your profitability and personalized recommendations",
+    "downloadPdf": "Download monthly PDF report",
+    "generatingPdf": "Generating PDF…",
+    "pdfError": "Unable to generate PDF report.",
+    "report": {
+      "title": "Profitability report",
+      "generate": "Generate report",
+      "regenerate": "Regenerate",
+      "generatedOn": "Generated on",
+      "analyzing": "AI is analyzing your data…",
+      "analyzingHint": "This takes about 10 seconds",
+      "emptyTitle": "Get your personalized analysis",
+      "emptyDesc": "AI analyzes your recipes, ingredients and food costs to generate actionable recommendations tailored to your restaurant.",
+      "error": "Unable to generate report."
+    },
+    "simulation": {
+      "title": "Menu simulation",
+      "desc": "Identify off-target recipes and get concrete adjustments to reach your ideal food cost.",
+      "targetLabel": "Target food cost",
+      "simulate": "🎯 Simulate",
+      "simulating": "Simulating…",
+      "error": "Unable to run simulation.",
+      "kpiCurrent": "Current average food cost",
+      "kpiTarget": "Target goal",
+      "kpiNonCompliant": "Non-compliant recipes",
+      "offTarget": "Off-target recipes",
+      "colRecipe": "Recipe",
+      "colCurrentFC": "Current FC",
+      "colCurrentPrice": "Current price",
+      "colTargetPrice": "Target price",
+      "colDelta": "Δ price",
+      "colKeyIngredient": "Key ingredient",
+      "aiReco": "✨ AI Recommendations"
+    },
+    "chat": {
+      "divider": "Chat with advisor",
+      "emptyTitle": "Ask your AI advisor a question",
+      "suggestion1": "What is my least profitable recipe?",
+      "suggestion2": "How can I reduce my food cost?",
+      "suggestion3": "Which ingredients have increased recently?",
+      "placeholder": "Ask a question… (Enter to send, Shift+Enter for new line)",
+      "disclaimer": "The advisor has access to all your real-time data.",
+      "error": "Error in AI response."
+    }
+  }
+}

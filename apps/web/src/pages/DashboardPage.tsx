@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ interface WeeklyAlertData {
 
 function WeeklyAlertBanner() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [data, setData] = useState<WeeklyAlertData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
@@ -114,8 +116,8 @@ function WeeklyAlertBanner() {
   const s = styles[data.severity];
   const icon = data.severity === 'critical' ? '🚨' : data.severity === 'warning' ? '⚠️' : '📊';
   const severityLabel =
-    data.severity === 'critical' ? 'Alerte critique' :
-    data.severity === 'warning' ? 'Attention' : 'Alerte hebdomadaire';
+    data.severity === 'critical' ? t('dashboard.weekly.critical') :
+    data.severity === 'warning' ? t('dashboard.weekly.warning') : t('dashboard.weekly.info');
 
   return (
     <div className={`rounded-xl border px-5 py-4 ${s.wrapper}`}>
@@ -131,7 +133,7 @@ function WeeklyAlertBanner() {
             </div>
             <p className={`mt-1.5 text-sm leading-relaxed ${s.label}`}>{data.alert}</p>
             <p className="mt-1 text-xs opacity-60" style={{ color: 'inherit' }}>
-              Généré le{' '}
+              {t('dashboard.weekly.generatedOn')}{' '}
               {new Date(data.generatedAt).toLocaleDateString('fr-FR', {
                 day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
               })}
@@ -144,12 +146,11 @@ function WeeklyAlertBanner() {
             onClick={() => navigate('/advisor')}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${s.btn}`}
           >
-            Voir les détails →
+            {t('dashboard.weekly.seeDetails')}
           </button>
           <button
             onClick={() => setDismissed(true)}
             className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-600"
-            title="Fermer"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -186,6 +187,7 @@ function KpiCard({
 }
 
 function RecipeTable({ rows, title }: { rows: RecipeSummary[]; title: string }) {
+  const { t } = useTranslation();
   if (rows.length === 0) return null;
   return (
     <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
@@ -196,11 +198,11 @@ function RecipeTable({ rows, title }: { rows: RecipeSummary[]; title: string }) 
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
-              <th className="px-5 py-3">Recette</th>
-              <th className="px-5 py-3">Catégorie</th>
-              <th className="px-5 py-3 text-right">Prix vente</th>
-              <th className="px-5 py-3 text-right">Food cost</th>
-              <th className="px-5 py-3 text-right">Marge / plat</th>
+              <th className="px-5 py-3">{t('dashboard.tables.recipe')}</th>
+              <th className="px-5 py-3">{t('dashboard.tables.category')}</th>
+              <th className="px-5 py-3 text-right">{t('dashboard.tables.sellingPrice')}</th>
+              <th className="px-5 py-3 text-right">{t('dashboard.tables.foodCost')}</th>
+              <th className="px-5 py-3 text-right">{t('dashboard.tables.margin')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -229,6 +231,7 @@ function RecipeTable({ rows, title }: { rows: RecipeSummary[]; title: string }) 
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -264,15 +267,20 @@ export function DashboardPage() {
 
   const { summary, alerts, topProfitable, topExpensive, priceEvolution } = data;
 
+  const fcSub =
+    summary.averageFoodCost <= 25
+      ? t('dashboard.kpi.fcExcellent')
+      : summary.averageFoodCost <= 30
+        ? t('dashboard.kpi.fcCorrect')
+        : t('dashboard.kpi.fcImprove');
+
   return (
     <div className="space-y-6">
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">Tableau de bord</h1>
-        <p className="mt-0.5 text-sm text-stone-500">
-          Vue globale de la rentabilité de votre menu
-        </p>
+        <h1 className="text-xl font-semibold text-stone-900">{t('dashboard.title')}</h1>
+        <p className="mt-0.5 text-sm text-stone-500">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* ── Alerte hebdomadaire ── */}
@@ -281,35 +289,29 @@ export function DashboardPage() {
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
-          label="Total recettes"
+          label={t('dashboard.kpi.totalRecipes')}
           value={String(summary.totalRecipes)}
-          sub={`${summary.rentableCount} rentables · ${summary.nonRentableCount} à revoir`}
+          sub={t('dashboard.kpi.rentableSub', { rentable: summary.rentableCount, nonRentable: summary.nonRentableCount })}
         />
         <KpiCard
-          label="Food cost moyen"
+          label={t('dashboard.kpi.avgFoodCost')}
           value={`${fmt(summary.averageFoodCost, 1)} %`}
-          sub={
-            summary.averageFoodCost <= 25
-              ? 'Excellent'
-              : summary.averageFoodCost <= 30
-                ? 'Correct'
-                : 'À améliorer'
-          }
+          sub={fcSub}
           accent={avgFoodCostBg(summary.averageFoodCost).replace('bg-', 'text-').replace('-500', '-600')}
         />
         <KpiCard
-          label="Rentables vs non rentables"
+          label={t('dashboard.kpi.rentableRatio')}
           value={`${summary.rentableCount} / ${summary.totalRecipes}`}
           sub={
             summary.totalRecipes > 0
-              ? `${Math.round((summary.rentableCount / summary.totalRecipes) * 100)} % du menu`
+              ? t('dashboard.kpi.ratioSub', { pct: Math.round((summary.rentableCount / summary.totalRecipes) * 100) })
               : undefined
           }
         />
         <KpiCard
-          label="Profit potentiel / service"
+          label={t('dashboard.kpi.profit')}
           value={`${fmt(summary.totalPotentialProfit)} €`}
-          sub="Somme des marges brutes"
+          sub={t('dashboard.kpi.profitSub')}
           accent="text-emerald-600"
         />
       </div>
@@ -319,7 +321,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="border-b border-stone-100 px-5 py-4">
             <h2 className="text-sm font-semibold text-stone-700">
-              Alertes intelligentes{' '}
+              {t('dashboard.alerts.title')}{' '}
               <span className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
                 {alerts.length}
               </span>
@@ -343,15 +345,15 @@ export function DashboardPage() {
 
       {/* ── Tables côte à côte sur grand écran ── */}
       <div className="grid gap-6 xl:grid-cols-2">
-        <RecipeTable title="Top 3 — Meilleures marges" rows={topProfitable} />
-        <RecipeTable title="Top 3 — Food cost le plus élevé" rows={topExpensive} />
+        <RecipeTable title={t('dashboard.tables.topProfitable')} rows={topProfitable} />
+        <RecipeTable title={t('dashboard.tables.topExpensive')} rows={topExpensive} />
       </div>
 
       {/* ── Évolution des prix ── */}
       {priceEvolution.length > 0 && (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="border-b border-stone-100 px-5 py-4">
-            <h2 className="text-sm font-semibold text-stone-700">Évolution des prix ingrédients</h2>
+            <h2 className="text-sm font-semibold text-stone-700">{t('dashboard.priceEvolution.title')}</h2>
           </div>
           <ul className="divide-y divide-stone-100">
             {priceEvolution.map((item) => {

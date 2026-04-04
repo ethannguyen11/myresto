@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -168,15 +169,17 @@ function ReportSection({
   error: string;
   onGenerate: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
         <div>
-          <h2 className="text-sm font-semibold text-stone-900">Rapport de rentabilité</h2>
+          <h2 className="text-sm font-semibold text-stone-900">{t('advisor.report.title')}</h2>
           {generatedAt && (
             <p className="mt-0.5 text-xs text-stone-400">
-              Généré le{' '}
+              {t('advisor.report.generatedOn')}{' '}
               {new Date(generatedAt).toLocaleString('fr-FR', {
                 day: '2-digit', month: 'short', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
@@ -192,11 +195,11 @@ function ReportSection({
           {loading ? (
             <>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Génération…
+              {t('common.generating')}
             </>
           ) : (
             <>
-              ✨ {report ? 'Regénérer' : 'Générer le rapport'}
+              ✨ {report ? t('advisor.report.regenerate') : t('advisor.report.generate')}
             </>
           )}
         </button>
@@ -214,8 +217,8 @@ function ReportSection({
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
             <p className="text-sm text-stone-500">
-              L'IA analyse vos données…<br />
-              <span className="text-xs text-stone-400">Cela prend environ 10 secondes</span>
+              {t('advisor.report.analyzing')}<br />
+              <span className="text-xs text-stone-400">{t('advisor.report.analyzingHint')}</span>
             </p>
           </div>
         ) : report ? (
@@ -224,11 +227,10 @@ function ReportSection({
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="text-4xl">📊</span>
             <p className="text-sm font-medium text-stone-700">
-              Obtenez votre analyse personnalisée
+              {t('advisor.report.emptyTitle')}
             </p>
             <p className="max-w-sm text-xs text-stone-400">
-              L'IA analyse vos recettes, ingrédients et food costs pour générer
-              des recommandations actionnables adaptées à votre restaurant.
+              {t('advisor.report.emptyDesc')}
             </p>
           </div>
         )}
@@ -258,6 +260,7 @@ interface SimulationResult {
 }
 
 function SimulationSection() {
+  const { t } = useTranslation();
   const [target, setTarget] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -270,7 +273,7 @@ function SimulationSection() {
       const res = await api.post<SimulationResult>('/advisor/simulate', { targetFoodCost: target });
       setResult(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Impossible de lancer la simulation.');
+      setError(err.response?.data?.message ?? t('advisor.simulation.error'));
     } finally {
       setLoading(false);
     }
@@ -280,16 +283,16 @@ function SimulationSection() {
     <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
       {/* Header */}
       <div className="border-b border-stone-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-stone-900">Simulation de menu</h2>
+        <h2 className="text-sm font-semibold text-stone-900">{t('advisor.simulation.title')}</h2>
         <p className="mt-0.5 text-xs text-stone-500">
-          Identifiez les recettes hors cible et obtenez des ajustements concrets pour atteindre votre food cost idéal.
+          {t('advisor.simulation.desc')}
         </p>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-end gap-4 px-5 py-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-stone-600">Food cost cible</label>
+          <label className="text-xs font-medium text-stone-600">{t('advisor.simulation.targetLabel')}</label>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -311,10 +314,10 @@ function SimulationSection() {
           {loading ? (
             <>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Simulation…
+              {t('advisor.simulation.simulating')}
             </>
           ) : (
-            '🎯 Simuler'
+            t('advisor.simulation.simulate')
           )}
         </button>
       </div>
@@ -333,15 +336,15 @@ function SimulationSection() {
               {/* KPIs */}
               <div className="flex flex-wrap gap-3">
                 <div className="flex-1 min-w-32 rounded-lg bg-stone-50 px-4 py-3">
-                  <p className="text-xs text-stone-500">Food cost moyen actuel</p>
+                  <p className="text-xs text-stone-500">{t('advisor.simulation.kpiCurrent')}</p>
                   <p className="mt-0.5 text-xl font-semibold text-stone-900">{result.currentAvgFoodCost}%</p>
                 </div>
                 <div className="flex-1 min-w-32 rounded-lg bg-emerald-50 px-4 py-3">
-                  <p className="text-xs text-emerald-700">Objectif cible</p>
+                  <p className="text-xs text-emerald-700">{t('advisor.simulation.kpiTarget')}</p>
                   <p className="mt-0.5 text-xl font-semibold text-emerald-700">{result.targetFoodCost}%</p>
                 </div>
                 <div className="flex-1 min-w-32 rounded-lg bg-orange-50 px-4 py-3">
-                  <p className="text-xs text-orange-700">Recettes non conformes</p>
+                  <p className="text-xs text-orange-700">{t('advisor.simulation.kpiNonCompliant')}</p>
                   <p className="mt-0.5 text-xl font-semibold text-orange-700">{result.recipes.length}</p>
                 </div>
               </div>
@@ -349,17 +352,17 @@ function SimulationSection() {
               {/* Non-compliant recipes table */}
               {result.recipes.length > 0 && (
                 <div>
-                  <p className="mb-2 text-xs font-medium text-stone-600">Recettes hors cible</p>
+                  <p className="mb-2 text-xs font-medium text-stone-600">{t('advisor.simulation.offTarget')}</p>
                   <div className="overflow-x-auto rounded-lg border border-stone-200">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-stone-200 bg-stone-50">
-                          <th className="px-3 py-2 text-left font-medium text-stone-600">Recette</th>
-                          <th className="px-3 py-2 text-right font-medium text-stone-600">FC actuel</th>
-                          <th className="px-3 py-2 text-right font-medium text-stone-600">Prix actuel</th>
-                          <th className="px-3 py-2 text-right font-medium text-stone-600">Prix cible</th>
-                          <th className="px-3 py-2 text-right font-medium text-stone-600">Δ prix</th>
-                          <th className="px-3 py-2 text-left font-medium text-stone-600">Ingrédient clé</th>
+                          <th className="px-3 py-2 text-left font-medium text-stone-600">{t('advisor.simulation.colRecipe')}</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">{t('advisor.simulation.colCurrentFC')}</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">{t('advisor.simulation.colCurrentPrice')}</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">{t('advisor.simulation.colTargetPrice')}</th>
+                          <th className="px-3 py-2 text-right font-medium text-stone-600">{t('advisor.simulation.colDelta')}</th>
+                          <th className="px-3 py-2 text-left font-medium text-stone-600">{t('advisor.simulation.colKeyIngredient')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -394,7 +397,7 @@ function SimulationSection() {
               {/* AI suggestions */}
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-                  ✨ Recommandations IA
+                  {t('advisor.simulation.aiReco')}
                 </p>
                 <div className="space-y-0.5">{renderMarkdown(result.suggestions)}</div>
               </div>
@@ -409,6 +412,8 @@ function SimulationSection() {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function AdvisorPage() {
+  const { t } = useTranslation();
+
   // Report state
   const [report, setReport] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
@@ -447,7 +452,7 @@ export function AdvisorPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      setPdfError('Impossible de générer le rapport PDF.');
+      setPdfError(t('advisor.pdfError'));
     } finally {
       setPdfLoading(false);
     }
@@ -462,7 +467,7 @@ export function AdvisorPage() {
       setGeneratedAt(res.data.generatedAt);
     } catch (err: any) {
       console.error('[AdvisorPage] report', err);
-      setReportError(err.response?.data?.message ?? 'Impossible de générer le rapport.');
+      setReportError(err.response?.data?.message ?? t('advisor.report.error'));
     } finally {
       setReportLoading(false);
     }
@@ -478,7 +483,6 @@ export function AdvisorPage() {
     setChatLoading(true);
     setChatError('');
 
-    // Build history excluding the message just added (will be sent as `message`)
     const history = messages;
 
     try {
@@ -489,8 +493,7 @@ export function AdvisorPage() {
       setMessages((m) => [...m, { role: 'assistant', content: res.data.reply }]);
     } catch (err: any) {
       console.error('[AdvisorPage] chat', err);
-      setChatError(err.response?.data?.message ?? 'Erreur lors de la réponse IA.');
-      // Remove the user message that failed
+      setChatError(err.response?.data?.message ?? t('advisor.chat.error'));
       setMessages((m) => m.slice(0, -1));
       setInput(text);
     } finally {
@@ -506,15 +509,21 @@ export function AdvisorPage() {
     }
   }
 
+  const chatSuggestions = [
+    t('advisor.chat.suggestion1'),
+    t('advisor.chat.suggestion2'),
+    t('advisor.chat.suggestion3'),
+  ];
+
   return (
     <div className="space-y-6">
 
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-stone-900">Conseiller IA</h1>
+          <h1 className="text-xl font-semibold text-stone-900">{t('advisor.title')}</h1>
           <p className="mt-0.5 text-sm text-stone-500">
-            Analyse intelligente de votre rentabilité et recommandations personnalisées
+            {t('advisor.subtitle')}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -526,10 +535,10 @@ export function AdvisorPage() {
             {pdfLoading ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-stone-400 border-t-transparent" />
-                Génération PDF…
+                {t('advisor.generatingPdf')}
               </>
             ) : (
-              '📄 Télécharger le rapport mensuel PDF'
+              `📄 ${t('advisor.downloadPdf')}`
             )}
           </button>
           {pdfError && <p className="text-xs text-red-600">{pdfError}</p>}
@@ -555,7 +564,7 @@ export function AdvisorPage() {
         </div>
         <div className="relative flex justify-center">
           <span className="bg-stone-50 px-3 text-xs font-medium text-stone-400">
-            Chat avec le conseiller
+            {t('advisor.chat.divider')}
           </span>
         </div>
       </div>
@@ -569,14 +578,10 @@ export function AdvisorPage() {
             <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
               <span className="text-4xl">🤖</span>
               <p className="text-sm font-medium text-stone-700">
-                Posez une question à votre conseiller IA
+                {t('advisor.chat.emptyTitle')}
               </p>
               <div className="flex flex-wrap justify-center gap-2">
-                {[
-                  'Quelle est ma recette la moins rentable ?',
-                  'Comment réduire mon food cost ?',
-                  'Quels ingrédients ont augmenté récemment ?',
-                ].map((suggestion) => (
+                {chatSuggestions.map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => { setInput(suggestion); inputRef.current?.focus(); }}
@@ -612,12 +617,11 @@ export function AdvisorPage() {
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
-                // Auto-grow up to 5 rows
                 e.target.style.height = 'auto';
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Posez une question… (Entrée pour envoyer, Maj+Entrée pour un retour à la ligne)"
+              placeholder={t('advisor.chat.placeholder')}
               disabled={chatLoading}
               className="flex-1 resize-none rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
               style={{ minHeight: '42px' }}
@@ -637,7 +641,7 @@ export function AdvisorPage() {
             </button>
           </div>
           <p className="mt-1.5 text-xs text-stone-400">
-            Le conseiller a accès à toutes vos données en temps réel.
+            {t('advisor.chat.disclaimer')}
           </p>
         </div>
       </div>

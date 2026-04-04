@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ function IngredientForm({
   onSave: (data: FormState) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -128,7 +130,7 @@ function IngredientForm({
     try {
       await onSave(form);
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Une erreur est survenue.');
+      setError(err.response?.data?.message ?? t('common.error'));
     } finally {
       setSubmitting(false);
     }
@@ -146,29 +148,29 @@ function IngredientForm({
       )}
 
       <div>
-        <label className={label}>Nom *</label>
+        <label className={label}>{t('ingredients.form.name')}</label>
         <input
           className={input}
           required
           value={form.name}
           onChange={field('name')}
-          placeholder="ex. Beurre AOP"
+          placeholder={t('ingredients.form.namePlaceholder')}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={label}>Unité *</label>
+          <label className={label}>{t('ingredients.form.unit')}</label>
           <input
             className={input}
             required
             value={form.unit}
             onChange={field('unit')}
-            placeholder="kg, L, pièce…"
+            placeholder={t('ingredients.form.unitPlaceholder')}
           />
         </div>
         <div>
-          <label className={label}>Prix actuel (€) *</label>
+          <label className={label}>{t('ingredients.form.price')}</label>
           <input
             className={input}
             required
@@ -177,18 +179,18 @@ function IngredientForm({
             step="0.01"
             value={form.currentPrice}
             onChange={field('currentPrice')}
-            placeholder="0,00"
+            placeholder={t('ingredients.form.pricePlaceholder')}
           />
         </div>
       </div>
 
       <div>
-        <label className={label}>Catégorie</label>
+        <label className={label}>{t('ingredients.form.category')}</label>
         <input
           className={input}
           value={form.category}
           onChange={field('category')}
-          placeholder="ex. Viande, Légumes, Épicerie…"
+          placeholder={t('ingredients.form.categoryPlaceholder')}
         />
       </div>
 
@@ -198,14 +200,14 @@ function IngredientForm({
           onClick={onCancel}
           className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={submitting}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
         >
-          {submitting ? 'Enregistrement…' : 'Enregistrer'}
+          {submitting ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>
@@ -221,6 +223,7 @@ function PriceHistoryModal({
   ingredient: Ingredient;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [history, setHistory] = useState<PriceHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -251,20 +254,20 @@ function PriceHistoryModal({
     .join(' ');
 
   return (
-    <Modal title={`Historique — ${ingredient.name}`} onClose={onClose}>
+    <Modal title={t('ingredients.history.title', { name: ingredient.name })} onClose={onClose}>
       {loading ? (
         <div className="flex h-24 items-center justify-center">
           <div className="h-6 w-6 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
         </div>
       ) : history.length === 0 ? (
-        <p className="py-8 text-center text-sm text-stone-400">Aucun historique disponible.</p>
+        <p className="py-8 text-center text-sm text-stone-400">{t('ingredients.history.empty')}</p>
       ) : (
         <div className="space-y-4">
           {/* Sparkline */}
           {prices.length > 1 && (
             <div className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
               <p className="mb-2 text-xs font-medium text-stone-400">
-                Évolution du prix (€ / {ingredient.unit})
+                {t('ingredients.history.chartLabel', { unit: ingredient.unit })}
               </p>
               <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-emerald-500">
                 <polyline
@@ -310,7 +313,7 @@ function PriceHistoryModal({
                         : 'bg-stone-100 text-stone-500'
                     }`}
                   >
-                    {h.source === 'invoice' ? 'facture' : 'manuel'}
+                    {h.source === 'invoice' ? t('ingredients.history.invoice') : t('ingredients.history.manual')}
                   </span>
                 </div>
                 <span className="text-xs text-stone-400">{fmtDateTime(h.recordedAt)}</span>
@@ -334,6 +337,7 @@ function DeleteModal({
   onConfirm: () => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
@@ -346,25 +350,23 @@ function DeleteModal({
   }
 
   return (
-    <Modal title="Confirmer la suppression" onClose={onCancel}>
+    <Modal title={t('common.confirmDelete')} onClose={onCancel}>
       <p className="text-sm text-stone-600">
-        Supprimer{' '}
-        <span className="font-semibold text-stone-900">{ingredient.name}</span> ?
-        Cette action est irréversible et supprimera l'historique des prix associé.
+        {t('ingredients.delete.message', { name: ingredient.name })}
       </p>
       <div className="mt-5 flex justify-end gap-2">
         <button
           onClick={onCancel}
           className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           onClick={handleConfirm}
           disabled={loading}
           className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
         >
-          {loading ? 'Suppression…' : 'Supprimer définitivement'}
+          {loading ? t('common.deleting') : t('common.deleteForever')}
         </button>
       </div>
     </Modal>
@@ -380,6 +382,7 @@ type ActiveModal =
   | { type: 'history'; ingredient: Ingredient };
 
 export function IngredientsPage() {
+  const { t } = useTranslation();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -391,7 +394,7 @@ export function IngredientsPage() {
       setIngredients(res.data);
     } catch (err: any) {
       console.error('[IngredientsPage] GET /ingredients', err);
-      setError(err.response?.data?.message ?? 'Impossible de charger les ingrédients.');
+      setError(err.response?.data?.message ?? t('ingredients.loadError'));
     } finally {
       setLoading(false);
     }
@@ -450,9 +453,9 @@ export function IngredientsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">Ingrédients</h1>
+            <h1 className="text-xl font-semibold text-stone-900">{t('ingredients.title')}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
-              {ingredients.length} ingrédient{ingredients.length !== 1 ? 's' : ''} au catalogue
+              {t('ingredients.subtitle', { count: ingredients.length })}
             </p>
           </div>
           <button
@@ -460,7 +463,7 @@ export function IngredientsPage() {
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
           >
             <span className="text-base leading-none">+</span>
-            Ajouter un ingrédient
+            {t('ingredients.add')}
           </button>
         </div>
 
@@ -468,15 +471,13 @@ export function IngredientsPage() {
         {ingredients.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center">
             <span className="text-4xl">🥕</span>
-            <p className="mt-3 text-sm font-medium text-stone-700">Aucun ingrédient</p>
-            <p className="mt-1 text-xs text-stone-400">
-              Ajoutez votre premier ingrédient pour commencer.
-            </p>
+            <p className="mt-3 text-sm font-medium text-stone-700">{t('ingredients.empty.title')}</p>
+            <p className="mt-1 text-xs text-stone-400">{t('ingredients.empty.desc')}</p>
             <button
               onClick={() => setModal({ type: 'create' })}
               className="mt-4 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
             >
-              Ajouter un ingrédient
+              {t('ingredients.add')}
             </button>
           </div>
         ) : (
@@ -485,11 +486,11 @@ export function IngredientsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
-                    <th className="px-5 py-3">Nom</th>
-                    <th className="px-5 py-3">Catégorie</th>
-                    <th className="px-5 py-3">Unité</th>
-                    <th className="px-5 py-3 text-right">Prix actuel</th>
-                    <th className="px-5 py-3 text-right">Mis à jour</th>
+                    <th className="px-5 py-3">{t('ingredients.table.name')}</th>
+                    <th className="px-5 py-3">{t('ingredients.table.category')}</th>
+                    <th className="px-5 py-3">{t('ingredients.table.unit')}</th>
+                    <th className="px-5 py-3 text-right">{t('ingredients.table.currentPrice')}</th>
+                    <th className="px-5 py-3 text-right">{t('ingredients.table.updatedAt')}</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -534,7 +535,7 @@ export function IngredientsPage() {
                         <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             onClick={() => setModal({ type: 'history', ingredient: ing })}
-                            title="Historique des prix"
+                            title={t('ingredients.history.title', { name: ing.name })}
                             className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
                           >
                             📈
@@ -543,13 +544,13 @@ export function IngredientsPage() {
                             onClick={() => setModal({ type: 'edit', ingredient: ing })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
                           >
-                            Modifier
+                            {t('common.edit')}
                           </button>
                           <button
                             onClick={() => setModal({ type: 'delete', ingredient: ing })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
                           >
-                            Supprimer
+                            {t('common.delete')}
                           </button>
                         </div>
                       </td>
@@ -564,7 +565,7 @@ export function IngredientsPage() {
 
       {/* ── Modals ── */}
       {modal?.type === 'create' && (
-        <Modal title="Ajouter un ingrédient" onClose={() => setModal(null)}>
+        <Modal title={t('ingredients.form.addTitle')} onClose={() => setModal(null)}>
           <IngredientForm
             initial={EMPTY_FORM}
             onSave={handleCreate}
@@ -575,7 +576,7 @@ export function IngredientsPage() {
 
       {modal?.type === 'edit' && (
         <Modal
-          title={`Modifier — ${modal.ingredient.name}`}
+          title={t('ingredients.form.editTitle', { name: modal.ingredient.name })}
           onClose={() => setModal(null)}
         >
           <IngredientForm

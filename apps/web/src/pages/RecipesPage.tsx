@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -148,6 +149,7 @@ function FoodCostPreview({
   form: RecipeForm;
   ingredientMap: Map<number, Ingredient>;
 }) {
+  const { t } = useTranslation();
   const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap);
   if (!result) return null;
 
@@ -164,17 +166,17 @@ function FoodCostPreview({
       }`}
     >
       <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">Coût ingrédients</p>
+        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.cost')}</p>
         <p className="font-semibold text-stone-800">{fmt(totalCost)} €</p>
       </div>
       <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">Food cost</p>
+        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.foodCost')}</p>
         <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>
           {fmt(foodCostPct, 1)} %
         </p>
       </div>
       <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">Marge / plat</p>
+        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.margin')}</p>
         <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>
           {fmt(profit)} €
         </p>
@@ -198,6 +200,7 @@ function RecipeFormModal({
   onSave: (form: RecipeForm) => Promise<void>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<RecipeForm>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -228,17 +231,16 @@ function RecipeFormModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    // Validate at least one complete item
     const validItems = form.items.filter((r) => r.ingredientId && r.quantity);
     if (validItems.length === 0) {
-      setError('Ajoutez au moins un ingrédient avec une quantité.');
+      setError(t('recipes.form.atLeastOne'));
       return;
     }
     setSubmitting(true);
     try {
       await onSave({ ...form, items: validItems });
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Une erreur est survenue.');
+      setError(err.response?.data?.message ?? t('common.error'));
     } finally {
       setSubmitting(false);
     }
@@ -259,26 +261,26 @@ function RecipeFormModal({
         {/* Recette info */}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className={labelCls}>Nom de la recette *</label>
+            <label className={labelCls}>{t('recipes.form.recipeName')}</label>
             <input
               className={inputCls}
               required
               value={form.name}
               onChange={setField('name')}
-              placeholder="ex. Magret de canard, sauce aux cerises"
+              placeholder={t('recipes.form.recipeNamePlaceholder')}
             />
           </div>
           <div>
-            <label className={labelCls}>Catégorie</label>
+            <label className={labelCls}>{t('recipes.form.category')}</label>
             <input
               className={inputCls}
               value={form.category}
               onChange={setField('category')}
-              placeholder="Entrée, Plat, Dessert…"
+              placeholder={t('recipes.form.categoryPlaceholder')}
             />
           </div>
           <div>
-            <label className={labelCls}>Prix de vente TTC (€) *</label>
+            <label className={labelCls}>{t('recipes.form.sellingPrice')}</label>
             <input
               className={inputCls}
               required
@@ -295,13 +297,13 @@ function RecipeFormModal({
         {/* Ingrédients */}
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className={labelCls + ' mb-0'}>Ingrédients *</label>
+            <label className={labelCls + ' mb-0'}>{t('recipes.form.ingredients')}</label>
             <button
               type="button"
               onClick={addItem}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50"
             >
-              <span>+</span> Ajouter
+              <span>+</span> {t('recipes.form.addIngredient')}
             </button>
           </div>
 
@@ -314,7 +316,7 @@ function RecipeFormModal({
                   onChange={(e) => setItemField(idx, 'ingredientId', e.target.value)}
                   className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  <option value="">— Choisir un ingrédient —</option>
+                  <option value="">{t('recipes.form.chooseIngredient')}</option>
                   {ingredients.map((ing) => (
                     <option key={ing.id} value={ing.id}>
                       {ing.name} ({ing.unit}) — {fmt(Number(ing.currentPrice))} €
@@ -329,7 +331,7 @@ function RecipeFormModal({
                   step="0.001"
                   value={row.quantity}
                   onChange={(e) => setItemField(idx, 'quantity', e.target.value)}
-                  placeholder="Qté"
+                  placeholder={t('recipes.form.qtyPlaceholder')}
                   className="w-24 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
 
@@ -357,12 +359,12 @@ function RecipeFormModal({
 
         {/* Notes */}
         <div>
-          <label className={labelCls}>Notes (facultatif)</label>
+          <label className={labelCls}>{t('recipes.form.notes')}</label>
           <textarea
             rows={2}
             value={form.notes}
             onChange={setField('notes')}
-            placeholder="Conseils de préparation, allergènes…"
+            placeholder={t('recipes.form.notesPlaceholder')}
             className={inputCls + ' resize-none'}
           />
         </div>
@@ -373,14 +375,14 @@ function RecipeFormModal({
             onClick={onClose}
             className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
           >
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={submitting}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
           >
-            {submitting ? 'Enregistrement…' : 'Enregistrer la recette'}
+            {submitting ? t('common.saving') : t('recipes.form.saveRecipe')}
           </button>
         </div>
       </form>
@@ -399,31 +401,30 @@ function DeleteModal({
   onConfirm: () => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   async function go() {
     setLoading(true);
     try { await onConfirm(); } finally { setLoading(false); }
   }
   return (
-    <Modal title="Confirmer la suppression" onClose={onCancel}>
+    <Modal title={t('common.confirmDelete')} onClose={onCancel}>
       <p className="text-sm text-stone-600">
-        Supprimer la recette{' '}
-        <span className="font-semibold text-stone-900">{recipe.name}</span> ? Cette action est
-        irréversible.
+        {t('recipes.delete.message', { name: recipe.name })}
       </p>
       <div className="mt-5 flex justify-end gap-2">
         <button
           onClick={onCancel}
           className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
         >
-          Annuler
+          {t('common.cancel')}
         </button>
         <button
           onClick={go}
           disabled={loading}
           className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
         >
-          {loading ? 'Suppression…' : 'Supprimer définitivement'}
+          {loading ? t('common.deleting') : t('common.deleteForever')}
         </button>
       </div>
     </Modal>
@@ -433,6 +434,7 @@ function DeleteModal({
 // ── Summary banner ─────────────────────────────────────────────────────────
 
 function SummaryBanner({ recipes }: { recipes: Recipe[] }) {
+  const { t } = useTranslation();
   if (recipes.length === 0) return null;
 
   const rentable = recipes.filter((r) => r.foodCost.isRentable).length;
@@ -448,15 +450,15 @@ function SummaryBanner({ recipes }: { recipes: Recipe[] }) {
         : 'text-red-500';
 
   const items = [
-    { label: 'Food cost moyen', value: `${fmt(avgFCRounded, 1)} %`, cls: fcCls },
-    { label: 'Recettes rentables', value: `${rentable} / ${recipes.length}`, cls: 'text-stone-800' },
+    { label: t('recipes.summary.avgFoodCost'), value: `${fmt(avgFCRounded, 1)} %`, cls: fcCls },
+    { label: t('recipes.summary.rentable'), value: `${rentable} / ${recipes.length}`, cls: 'text-stone-800' },
     {
-      label: 'Taux de rentabilité',
+      label: t('recipes.summary.rentabilityRate'),
       value: `${Math.round((rentable / recipes.length) * 100)} %`,
       cls: rentable === recipes.length ? 'text-emerald-600' : 'text-amber-500',
     },
     {
-      label: 'Profit total / service',
+      label: t('recipes.summary.totalProfit'),
       value: `${fmt(recipes.reduce((s, r) => s + r.foodCost.profitPerDish, 0))} €`,
       cls: 'text-emerald-600',
     },
@@ -497,6 +499,7 @@ function recipeToForm(r: Recipe): RecipeForm {
 }
 
 export function RecipesPage() {
+  const { t } = useTranslation();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -513,7 +516,7 @@ export function RecipesPage() {
       setIngredients(iRes.data);
     } catch (err: any) {
       console.error('[RecipesPage] load', err);
-      setError(err.response?.data?.message ?? 'Impossible de charger les recettes.');
+      setError(err.response?.data?.message ?? t('recipes.loadError'));
     } finally {
       setLoading(false);
     }
@@ -577,9 +580,9 @@ export function RecipesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">Recettes</h1>
+            <h1 className="text-xl font-semibold text-stone-900">{t('recipes.title')}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
-              {recipes.length} recette{recipes.length !== 1 ? 's' : ''} sur la carte
+              {t('recipes.subtitle', { count: recipes.length })}
             </p>
           </div>
           <button
@@ -587,7 +590,7 @@ export function RecipesPage() {
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
           >
             <span className="text-base leading-none">+</span>
-            Nouvelle recette
+            {t('recipes.add')}
           </button>
         </div>
 
@@ -598,15 +601,13 @@ export function RecipesPage() {
         {recipes.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center">
             <span className="text-4xl">👨‍🍳</span>
-            <p className="mt-3 text-sm font-medium text-stone-700">Aucune recette</p>
-            <p className="mt-1 text-xs text-stone-400">
-              Créez votre première recette pour calculer votre food cost.
-            </p>
+            <p className="mt-3 text-sm font-medium text-stone-700">{t('recipes.empty.title')}</p>
+            <p className="mt-1 text-xs text-stone-400">{t('recipes.empty.desc')}</p>
             <button
               onClick={() => setModal({ type: 'create' })}
               className="mt-4 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
             >
-              Créer une recette
+              {t('recipes.empty.cta')}
             </button>
           </div>
         ) : (
@@ -615,13 +616,13 @@ export function RecipesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
-                    <th className="px-5 py-3">Recette</th>
-                    <th className="px-5 py-3">Catégorie</th>
-                    <th className="px-5 py-3 text-right">Prix vente</th>
-                    <th className="px-5 py-3 text-right">Coût total</th>
-                    <th className="px-5 py-3 text-right">Food cost</th>
-                    <th className="px-5 py-3 text-right">Marge / plat</th>
-                    <th className="px-5 py-3">Statut</th>
+                    <th className="px-5 py-3">{t('recipes.table.recipe')}</th>
+                    <th className="px-5 py-3">{t('recipes.table.category')}</th>
+                    <th className="px-5 py-3 text-right">{t('recipes.table.sellingPrice')}</th>
+                    <th className="px-5 py-3 text-right">{t('recipes.table.totalCost')}</th>
+                    <th className="px-5 py-3 text-right">{t('recipes.table.foodCost')}</th>
+                    <th className="px-5 py-3 text-right">{t('recipes.table.margin')}</th>
+                    <th className="px-5 py-3">{t('recipes.table.status')}</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -632,7 +633,7 @@ export function RecipesPage() {
                         <div className="font-medium text-stone-800">{r.name}</div>
                         {r.items.length > 0 && (
                           <div className="mt-0.5 text-xs text-stone-400">
-                            {r.items.length} ingrédient{r.items.length !== 1 ? 's' : ''}
+                            {t('recipes.table.ingredientCount', { count: r.items.length })}
                           </div>
                         )}
                       </td>
@@ -675,13 +676,13 @@ export function RecipesPage() {
                             onClick={() => setModal({ type: 'edit', recipe: r })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
                           >
-                            Modifier
+                            {t('common.edit')}
                           </button>
                           <button
                             onClick={() => setModal({ type: 'delete', recipe: r })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
                           >
-                            Supprimer
+                            {t('common.delete')}
                           </button>
                         </div>
                       </td>
@@ -697,7 +698,7 @@ export function RecipesPage() {
       {/* ── Modals ── */}
       {modal?.type === 'create' && (
         <RecipeFormModal
-          title="Nouvelle recette"
+          title={t('recipes.form.createTitle')}
           initial={EMPTY_FORM}
           ingredients={ingredients}
           onSave={handleCreate}
@@ -707,7 +708,7 @@ export function RecipesPage() {
 
       {modal?.type === 'edit' && (
         <RecipeFormModal
-          title={`Modifier — ${modal.recipe.name}`}
+          title={t('recipes.form.editTitle', { name: modal.recipe.name })}
           initial={recipeToForm(modal.recipe)}
           ingredients={ingredients}
           onSave={(form) => handleEdit(modal.recipe, form)}

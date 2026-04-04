@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -50,14 +51,6 @@ function fmt(n: number | null, dec = 2): string {
 
 // ── Status badge ───────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  pending:   'En attente',
-  analyzing: 'Analyse IA…',
-  reviewed:  'À valider',
-  validated: 'Validée',
-  error:     'Erreur',
-};
-
 const STATUS_CLS: Record<InvoiceStatus, string> = {
   pending:   'bg-stone-100 text-stone-500',
   analyzing: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200',
@@ -67,12 +60,13 @@ const STATUS_CLS: Record<InvoiceStatus, string> = {
 };
 
 function StatusBadge({ status }: { status: InvoiceStatus }) {
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLS[status]}`}>
       {status === 'analyzing' && (
         <span className="h-1.5 w-1.5 animate-ping rounded-full bg-amber-500" />
       )}
-      {STATUS_LABELS[status]}
+      {t(`invoices.status.${status}`)}
     </span>
   );
 }
@@ -116,6 +110,7 @@ function Modal({
 // ── Upload zone ────────────────────────────────────────────────────────────
 
 function UploadZone({ onUploaded }: { onUploaded: () => void }) {
+  const { t } = useTranslation();
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [statusMsg, setStatusMsg] = useState('');
@@ -125,7 +120,7 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   async function upload(file: File) {
     setError('');
     setProgress(0);
-    setStatusMsg('Envoi du fichier…');
+    setStatusMsg(t('invoices.upload.uploading'));
 
     const formData = new FormData();
     formData.append('file', file);
@@ -137,7 +132,7 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
           if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
         },
       });
-      setStatusMsg('Fichier envoyé — analyse IA en cours…');
+      setStatusMsg(t('invoices.upload.sent'));
       setTimeout(() => {
         setProgress(null);
         setStatusMsg('');
@@ -145,7 +140,7 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
       }, 1500);
     } catch (err: any) {
       console.error('[InvoicesPage] upload', err);
-      setError(err.response?.data?.message ?? 'Échec de l\'envoi.');
+      setError(err.response?.data?.message ?? t('invoices.upload.failed'));
       setProgress(null);
       setStatusMsg('');
     }
@@ -156,7 +151,7 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
     const file = files[0];
     const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (!allowed.includes(file.type) && !/\.(pdf|jpe?g|png|webp)$/i.test(file.name)) {
-      setError('Format non supporté. Utilisez PDF, JPEG ou PNG.');
+      setError(t('invoices.upload.invalidFormat'));
       return;
     }
     upload(file);
@@ -173,8 +168,8 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
       <div className="border-b border-stone-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-stone-700">Importer une facture</h2>
-        <p className="mt-0.5 text-xs text-stone-400">PDF, JPEG ou PNG · 10 Mo max</p>
+        <h2 className="text-sm font-semibold text-stone-700">{t('invoices.upload.title')}</h2>
+        <p className="mt-0.5 text-xs text-stone-400">{t('invoices.upload.formats')}</p>
       </div>
       <div className="p-5">
         {/* Drop area */}
@@ -210,11 +205,11 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
             <>
               <span className="text-4xl">🧾</span>
               <p className="mt-3 text-sm font-medium text-stone-700">
-                Glissez une facture ici ou{' '}
-                <span className="text-emerald-600 underline underline-offset-2">parcourir</span>
+                {t('invoices.upload.dropLabel')}{' '}
+                <span className="text-emerald-600 underline underline-offset-2">{t('invoices.upload.browse')}</span>
               </p>
               <p className="mt-1 text-xs text-stone-400">
-                L'IA extrait automatiquement les lignes et met à jour vos prix ingrédients
+                {t('invoices.upload.aiDesc')}
               </p>
             </>
           )}
@@ -241,7 +236,7 @@ function ValidationModal({
   onClose: () => void;
   onValidated: () => void;
 }) {
-  // Map itemId → selected ingredientId (string for select, '' = null)
+  const { t } = useTranslation();
   const [selections, setSelections] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {};
     for (const item of invoice.items) {
@@ -267,18 +262,19 @@ function ValidationModal({
       onClose();
     } catch (err: any) {
       console.error('[InvoicesPage] validate-items', err);
-      setError(err.response?.data?.message ?? 'Erreur lors de la validation.');
+      setError(err.response?.data?.message ?? t('invoices.validation.error'));
     } finally {
       setSubmitting(false);
     }
   }
 
+  const supplierLabel = invoice.supplierName ?? `Facture #${invoice.id}`;
+
   return (
-    <Modal title={`Valider — ${invoice.supplierName ?? `Facture #${invoice.id}`}`} wide onClose={onClose}>
+    <Modal title={t('invoices.validation.title', { supplier: supplierLabel })} wide onClose={onClose}>
       <div className="space-y-4">
         <p className="text-sm text-stone-500">
-          Associez chaque ligne extraite par l'IA à un ingrédient de votre catalogue.
-          Les prix seront mis à jour automatiquement après confirmation.
+          {t('invoices.validation.desc')}
         </p>
 
         {error && (
@@ -287,17 +283,17 @@ function ValidationModal({
 
         {/* Column headers */}
         <div className="grid grid-cols-[1fr_80px_80px_1fr] gap-2 border-b border-stone-100 pb-2 text-xs font-medium uppercase tracking-wide text-stone-400">
-          <span>Nom extrait</span>
-          <span className="text-right">Qté</span>
-          <span className="text-right">Prix unit.</span>
-          <span>Associer à</span>
+          <span>{t('invoices.validation.colExtracted')}</span>
+          <span className="text-right">{t('invoices.validation.colQty')}</span>
+          <span className="text-right">{t('invoices.validation.colUnitPrice')}</span>
+          <span>{t('invoices.validation.colLink')}</span>
         </div>
 
         {/* Items */}
         <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
           {unconfirmed.length === 0 ? (
             <li className="py-4 text-center text-sm text-stone-400">
-              Toutes les lignes sont déjà confirmées.
+              {t('invoices.validation.allConfirmed')}
             </li>
           ) : (
             unconfirmed.map((item) => (
@@ -331,7 +327,7 @@ function ValidationModal({
                   }
                   className="rounded-lg border border-stone-300 px-2 py-1.5 text-xs text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  <option value="">— Ignorer —</option>
+                  <option value="">{t('invoices.validation.ignore')}</option>
                   {ingredients.map((ing) => (
                     <option key={ing.id} value={ing.id}>
                       {ing.name} ({ing.unit})
@@ -346,7 +342,9 @@ function ValidationModal({
         {/* Already confirmed */}
         {invoice.items.some((i) => i.isConfirmed) && (
           <p className="text-xs text-stone-400">
-            {invoice.items.filter((i) => i.isConfirmed).length} ligne(s) déjà confirmée(s)
+            {t('invoices.validation.alreadyConfirmed', {
+              count: invoice.items.filter((i) => i.isConfirmed).length,
+            })}
           </p>
         )}
 
@@ -355,14 +353,16 @@ function ValidationModal({
             onClick={onClose}
             className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
           >
-            Annuler
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleValidate}
             disabled={submitting || unconfirmed.length === 0}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
           >
-            {submitting ? 'Validation…' : `Confirmer ${unconfirmed.length} ligne${unconfirmed.length !== 1 ? 's' : ''}`}
+            {submitting
+              ? t('invoices.validation.confirming')
+              : t('invoices.validation.confirm', { count: unconfirmed.length })}
           </button>
         </div>
       </div>
@@ -377,6 +377,7 @@ type ActiveModal =
   | { type: 'delete'; invoice: Invoice };
 
 export function InvoicesPage() {
+  const { t } = useTranslation();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -394,7 +395,7 @@ export function InvoicesPage() {
       setIngredients(ingRes.data);
     } catch (err: any) {
       console.error('[InvoicesPage] load', err);
-      if (!silent) setError(err.response?.data?.message ?? 'Impossible de charger les factures.');
+      if (!silent) setError(err.response?.data?.message ?? t('invoices.loadError'));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -465,12 +466,12 @@ export function InvoicesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">Factures</h1>
+            <h1 className="text-xl font-semibold text-stone-900">{t('invoices.title')}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
-              {invoices.length} facture{invoices.length !== 1 ? 's' : ''}
+              {t('invoices.subtitle', { count: invoices.length })}
               {toReview > 0 && (
                 <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                  {toReview} à valider
+                  {t('invoices.toValidate', { count: toReview })}
                 </span>
               )}
             </p>
@@ -478,11 +479,11 @@ export function InvoicesPage() {
           {invoices.length > 0 && (
             <div className="flex gap-4 text-right">
               <div>
-                <p className="text-xs text-stone-400">Validées</p>
+                <p className="text-xs text-stone-400">{t('invoices.validated')}</p>
                 <p className="text-lg font-semibold text-emerald-600">{validated}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-400">Total importées</p>
+                <p className="text-xs text-stone-400">{t('invoices.totalImported')}</p>
                 <p className="text-lg font-semibold text-stone-800">{invoices.length}</p>
               </div>
             </div>
@@ -496,26 +497,24 @@ export function InvoicesPage() {
         {invoices.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center">
             <span className="text-4xl">📂</span>
-            <p className="mt-3 text-sm font-medium text-stone-700">Aucune facture importée</p>
-            <p className="mt-1 text-xs text-stone-400">
-              Glissez un fichier dans la zone ci-dessus pour commencer.
-            </p>
+            <p className="mt-3 text-sm font-medium text-stone-700">{t('invoices.empty.title')}</p>
+            <p className="mt-1 text-xs text-stone-400">{t('invoices.empty.desc')}</p>
           </div>
         ) : (
           <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
             <div className="border-b border-stone-100 px-5 py-4">
-              <h2 className="text-sm font-semibold text-stone-700">Historique des factures</h2>
+              <h2 className="text-sm font-semibold text-stone-700">{t('invoices.history')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
-                    <th className="px-5 py-3">Fournisseur</th>
-                    <th className="px-5 py-3">Date facture</th>
-                    <th className="px-5 py-3">Importée le</th>
-                    <th className="px-5 py-3 text-right">Montant</th>
-                    <th className="px-5 py-3 text-center">Lignes</th>
-                    <th className="px-5 py-3">Statut</th>
+                    <th className="px-5 py-3">{t('invoices.table.supplier')}</th>
+                    <th className="px-5 py-3">{t('invoices.table.invoiceDate')}</th>
+                    <th className="px-5 py-3">{t('invoices.table.importedOn')}</th>
+                    <th className="px-5 py-3 text-right">{t('invoices.table.amount')}</th>
+                    <th className="px-5 py-3 text-center">{t('invoices.table.lines')}</th>
+                    <th className="px-5 py-3">{t('invoices.table.status')}</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -526,7 +525,7 @@ export function InvoicesPage() {
                       <td className="px-5 py-3">
                         <span className="font-medium text-stone-800">
                           {inv.supplierName ?? (
-                            <span className="text-stone-400 italic">Analyse en cours…</span>
+                            <span className="text-stone-400 italic">{t('invoices.table.analyzing')}</span>
                           )}
                         </span>
                       </td>
@@ -566,7 +565,7 @@ export function InvoicesPage() {
                               onClick={() => setModal({ type: 'validate', invoice: inv })}
                               className="rounded-md px-2.5 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
                             >
-                              Valider
+                              {t('common.validate')}
                             </button>
                           )}
                           {inv.status === 'error' && (
@@ -574,7 +573,7 @@ export function InvoicesPage() {
                               onClick={() => handleAnalyze(inv)}
                               className="rounded-md px-2.5 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50"
                             >
-                              Réanalyser
+                              {t('invoices.reanalyze')}
                             </button>
                           )}
                           <button
@@ -582,7 +581,7 @@ export function InvoicesPage() {
                             disabled={inv.status === 'analyzing'}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
                           >
-                            Supprimer
+                            {t('common.delete')}
                           </button>
                         </div>
                       </td>
@@ -606,26 +605,24 @@ export function InvoicesPage() {
       )}
 
       {modal?.type === 'delete' && (
-        <Modal title="Confirmer la suppression" onClose={() => setModal(null)}>
+        <Modal title={t('common.confirmDelete')} onClose={() => setModal(null)}>
           <p className="text-sm text-stone-600">
-            Supprimer la facture{' '}
-            <span className="font-semibold text-stone-900">
-              {modal.invoice.supplierName ?? `#${modal.invoice.id}`}
-            </span>{' '}
-            et toutes ses lignes ? Cette action est irréversible.
+            {t('invoices.delete.message', {
+              name: modal.invoice.supplierName ?? `#${modal.invoice.id}`,
+            })}
           </p>
           <div className="mt-5 flex justify-end gap-2">
             <button
               onClick={() => setModal(null)}
               className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
             <button
               onClick={() => handleDelete(modal.invoice)}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
             >
-              Supprimer définitivement
+              {t('common.deleteForever')}
             </button>
           </div>
         </Modal>

@@ -1,0 +1,280 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "ingredients": "Ingrédients",
+    "recipes": "Recettes",
+    "invoices": "Factures",
+    "advisor": "Conseiller IA",
+    "logout": "Déconnexion"
+  },
+  "lang": {
+    "switch": "EN",
+    "flag": "🇬🇧"
+  },
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "delete": "Supprimer",
+    "deleting": "Suppression…",
+    "deleteForever": "Supprimer définitivement",
+    "confirmDelete": "Confirmer la suppression",
+    "edit": "Modifier",
+    "validate": "Valider",
+    "error": "Une erreur est survenue.",
+    "generatedOn": "Généré le",
+    "generating": "Génération…",
+    "loading": "Chargement…"
+  },
+  "login": {
+    "tagline": "Connectez-vous pour gérer votre rentabilité",
+    "email": "Email",
+    "emailPlaceholder": "chef@monrestaurant.fr",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Se connecter",
+    "submitting": "Connexion…",
+    "error": "Identifiants incorrects. Réessayez."
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Vue globale de la rentabilité de votre menu",
+    "kpi": {
+      "totalRecipes": "Total recettes",
+      "rentableSub": "{{rentable}} rentables · {{nonRentable}} à revoir",
+      "avgFoodCost": "Food cost moyen",
+      "fcExcellent": "Excellent",
+      "fcCorrect": "Correct",
+      "fcImprove": "À améliorer",
+      "rentableRatio": "Rentables vs non rentables",
+      "ratioSub": "{{pct}} % du menu",
+      "profit": "Profit potentiel / service",
+      "profitSub": "Somme des marges brutes"
+    },
+    "alerts": {
+      "title": "Alertes intelligentes"
+    },
+    "tables": {
+      "topProfitable": "Top 3 — Meilleures marges",
+      "topExpensive": "Top 3 — Food cost le plus élevé",
+      "recipe": "Recette",
+      "category": "Catégorie",
+      "sellingPrice": "Prix vente",
+      "foodCost": "Food cost",
+      "margin": "Marge / plat"
+    },
+    "priceEvolution": {
+      "title": "Évolution des prix ingrédients"
+    },
+    "weekly": {
+      "critical": "Alerte critique",
+      "warning": "Attention",
+      "info": "Alerte hebdomadaire",
+      "seeDetails": "Voir les détails →",
+      "generatedOn": "Généré le"
+    }
+  },
+  "ingredients": {
+    "title": "Ingrédients",
+    "subtitle_one": "{{count}} ingrédient au catalogue",
+    "subtitle_other": "{{count}} ingrédients au catalogue",
+    "add": "Ajouter un ingrédient",
+    "empty": {
+      "title": "Aucun ingrédient",
+      "desc": "Ajoutez votre premier ingrédient pour commencer."
+    },
+    "table": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "unit": "Unité",
+      "currentPrice": "Prix actuel",
+      "updatedAt": "Mis à jour"
+    },
+    "form": {
+      "addTitle": "Ajouter un ingrédient",
+      "editTitle": "Modifier — {{name}}",
+      "name": "Nom *",
+      "namePlaceholder": "ex. Beurre AOP",
+      "unit": "Unité *",
+      "unitPlaceholder": "kg, L, pièce…",
+      "price": "Prix actuel (€) *",
+      "pricePlaceholder": "0,00",
+      "category": "Catégorie",
+      "categoryPlaceholder": "ex. Viande, Légumes, Épicerie…"
+    },
+    "history": {
+      "title": "Historique — {{name}}",
+      "empty": "Aucun historique disponible.",
+      "chartLabel": "Évolution du prix (€ / {{unit}})",
+      "invoice": "facture",
+      "manual": "manuel"
+    },
+    "delete": {
+      "message": "Supprimer {{name}} ? Cette action est irréversible et supprimera l'historique des prix associé."
+    },
+    "loadError": "Impossible de charger les ingrédients."
+  },
+  "recipes": {
+    "title": "Recettes",
+    "subtitle_one": "{{count}} recette sur la carte",
+    "subtitle_other": "{{count}} recettes sur la carte",
+    "add": "Nouvelle recette",
+    "empty": {
+      "title": "Aucune recette",
+      "desc": "Créez votre première recette pour calculer votre food cost.",
+      "cta": "Créer une recette"
+    },
+    "table": {
+      "recipe": "Recette",
+      "category": "Catégorie",
+      "sellingPrice": "Prix vente",
+      "totalCost": "Coût total",
+      "foodCost": "Food cost",
+      "margin": "Marge / plat",
+      "status": "Statut",
+      "ingredientCount_one": "{{count}} ingrédient",
+      "ingredientCount_other": "{{count}} ingrédients"
+    },
+    "summary": {
+      "avgFoodCost": "Food cost moyen",
+      "rentable": "Recettes rentables",
+      "rentabilityRate": "Taux de rentabilité",
+      "totalProfit": "Profit total / service"
+    },
+    "form": {
+      "createTitle": "Nouvelle recette",
+      "editTitle": "Modifier — {{name}}",
+      "recipeName": "Nom de la recette *",
+      "recipeNamePlaceholder": "ex. Magret de canard, sauce aux cerises",
+      "category": "Catégorie",
+      "categoryPlaceholder": "Entrée, Plat, Dessert…",
+      "sellingPrice": "Prix de vente TTC (€) *",
+      "ingredients": "Ingrédients *",
+      "addIngredient": "Ajouter",
+      "chooseIngredient": "— Choisir un ingrédient —",
+      "qtyPlaceholder": "Qté",
+      "notes": "Notes (facultatif)",
+      "notesPlaceholder": "Conseils de préparation, allergènes…",
+      "saveRecipe": "Enregistrer la recette",
+      "atLeastOne": "Ajoutez au moins un ingrédient avec une quantité."
+    },
+    "preview": {
+      "cost": "Coût ingrédients",
+      "foodCost": "Food cost",
+      "margin": "Marge / plat"
+    },
+    "delete": {
+      "message": "Supprimer la recette {{name}} ? Cette action est irréversible."
+    },
+    "loadError": "Impossible de charger les recettes."
+  },
+  "invoices": {
+    "title": "Factures",
+    "subtitle_one": "{{count}} facture",
+    "subtitle_other": "{{count}} factures",
+    "toValidate_one": "{{count}} à valider",
+    "toValidate_other": "{{count}} à valider",
+    "validated": "Validées",
+    "totalImported": "Total importées",
+    "upload": {
+      "title": "Importer une facture",
+      "formats": "PDF, JPEG ou PNG · 10 Mo max",
+      "dropLabel": "Glissez une facture ici ou",
+      "browse": "parcourir",
+      "aiDesc": "L'IA extrait automatiquement les lignes et met à jour vos prix ingrédients",
+      "uploading": "Envoi du fichier…",
+      "sent": "Fichier envoyé — analyse IA en cours…",
+      "failed": "Échec de l'envoi.",
+      "invalidFormat": "Format non supporté. Utilisez PDF, JPEG ou PNG."
+    },
+    "status": {
+      "pending": "En attente",
+      "analyzing": "Analyse IA…",
+      "reviewed": "À valider",
+      "validated": "Validée",
+      "error": "Erreur"
+    },
+    "table": {
+      "supplier": "Fournisseur",
+      "invoiceDate": "Date facture",
+      "importedOn": "Importée le",
+      "amount": "Montant",
+      "lines": "Lignes",
+      "status": "Statut",
+      "analyzing": "Analyse en cours…"
+    },
+    "history": "Historique des factures",
+    "reanalyze": "Réanalyser",
+    "empty": {
+      "title": "Aucune facture importée",
+      "desc": "Glissez un fichier dans la zone ci-dessus pour commencer."
+    },
+    "validation": {
+      "title": "Valider — {{supplier}}",
+      "desc": "Associez chaque ligne extraite par l'IA à un ingrédient de votre catalogue. Les prix seront mis à jour automatiquement après confirmation.",
+      "colExtracted": "Nom extrait",
+      "colQty": "Qté",
+      "colUnitPrice": "Prix unit.",
+      "colLink": "Associer à",
+      "allConfirmed": "Toutes les lignes sont déjà confirmées.",
+      "alreadyConfirmed_one": "{{count}} ligne déjà confirmée",
+      "alreadyConfirmed_other": "{{count}} lignes déjà confirmées",
+      "ignore": "— Ignorer —",
+      "confirm_one": "Confirmer {{count}} ligne",
+      "confirm_other": "Confirmer {{count}} lignes",
+      "confirming": "Validation…",
+      "error": "Erreur lors de la validation."
+    },
+    "delete": {
+      "message": "Supprimer la facture {{name}} et toutes ses lignes ? Cette action est irréversible."
+    },
+    "loadError": "Impossible de charger les factures."
+  },
+  "advisor": {
+    "title": "Conseiller IA",
+    "subtitle": "Analyse intelligente de votre rentabilité et recommandations personnalisées",
+    "downloadPdf": "Télécharger le rapport mensuel PDF",
+    "generatingPdf": "Génération PDF…",
+    "pdfError": "Impossible de générer le rapport PDF.",
+    "report": {
+      "title": "Rapport de rentabilité",
+      "generate": "Générer le rapport",
+      "regenerate": "Regénérer",
+      "generatedOn": "Généré le",
+      "analyzing": "L'IA analyse vos données…",
+      "analyzingHint": "Cela prend environ 10 secondes",
+      "emptyTitle": "Obtenez votre analyse personnalisée",
+      "emptyDesc": "L'IA analyse vos recettes, ingrédients et food costs pour générer des recommandations actionnables adaptées à votre restaurant.",
+      "error": "Impossible de générer le rapport."
+    },
+    "simulation": {
+      "title": "Simulation de menu",
+      "desc": "Identifiez les recettes hors cible et obtenez des ajustements concrets pour atteindre votre food cost idéal.",
+      "targetLabel": "Food cost cible",
+      "simulate": "🎯 Simuler",
+      "simulating": "Simulation…",
+      "error": "Impossible de lancer la simulation.",
+      "kpiCurrent": "Food cost moyen actuel",
+      "kpiTarget": "Objectif cible",
+      "kpiNonCompliant": "Recettes non conformes",
+      "offTarget": "Recettes hors cible",
+      "colRecipe": "Recette",
+      "colCurrentFC": "FC actuel",
+      "colCurrentPrice": "Prix actuel",
+      "colTargetPrice": "Prix cible",
+      "colDelta": "Δ prix",
+      "colKeyIngredient": "Ingrédient clé",
+      "aiReco": "✨ Recommandations IA"
+    },
+    "chat": {
+      "divider": "Chat avec le conseiller",
+      "emptyTitle": "Posez une question à votre conseiller IA",
+      "suggestion1": "Quelle est ma recette la moins rentable ?",
+      "suggestion2": "Comment réduire mon food cost ?",
+      "suggestion3": "Quels ingrédients ont augmenté récemment ?",
+      "placeholder": "Posez une question… (Entrée pour envoyer, Maj+Entrée pour un retour à la ligne)",
+      "disclaimer": "Le conseiller a accès à toutes vos données en temps réel.",
+      "error": "Erreur lors de la réponse IA."
+    }
+  }
+}

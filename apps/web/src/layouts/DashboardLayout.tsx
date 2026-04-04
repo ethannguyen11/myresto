@@ -1,16 +1,24 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
-
-const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
-  { to: '/ingredients', label: 'Ingrédients', icon: '🥕' },
-  { to: '/recipes', label: 'Recettes', icon: '👨‍🍳' },
-  { to: '/invoices', label: 'Factures', icon: '🧾' },
-  { to: '/advisor', label: 'Conseiller IA', icon: '🤖' },
-] as const;
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  const NAV_ITEMS = [
+    { to: '/', label: t('nav.dashboard'), icon: '📊' },
+    { to: '/ingredients', label: t('nav.ingredients'), icon: '🥕' },
+    { to: '/recipes', label: t('nav.recipes'), icon: '👨‍🍳' },
+    { to: '/invoices', label: t('nav.invoices'), icon: '🧾' },
+    { to: '/advisor', label: t('nav.advisor'), icon: '🤖' },
+  ];
+
+  function toggleLang() {
+    const next = i18n.language === 'fr' ? 'en' : 'fr';
+    i18n.changeLanguage(next);
+    localStorage.setItem('i18n_language', next);
+  }
 
   return (
     <div className="flex h-screen bg-stone-50">
@@ -47,7 +55,16 @@ export function DashboardLayout() {
         </nav>
 
         {/* User footer */}
-        <div className="border-t border-stone-200 p-4">
+        <div className="border-t border-stone-200 p-4 space-y-3">
+          {/* Language switcher */}
+          <button
+            onClick={toggleLang}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-800"
+          >
+            <span>{t('lang.flag')}</span>
+            <span>{t('lang.switch')}</span>
+          </button>
+
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-stone-900">
@@ -59,7 +76,7 @@ export function DashboardLayout() {
               onClick={logout}
               className="rounded-md px-2 py-1 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
             >
-              Déconnexion
+              {t('nav.logout')}
             </button>
           </div>
         </div>
