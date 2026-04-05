@@ -22,6 +22,8 @@ interface InvoiceItem {
   isConfirmed: boolean;
   ingredientId: number | null;
   ingredient: Ingredient | null;
+  matchScore: number | null;
+  matchMethod: string | null;
 }
 
 interface Invoice {
@@ -223,6 +225,36 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   );
 }
 
+// ── Match badge ────────────────────────────────────────────────────────────
+
+function MatchBadge({ method, score }: { method: string | null; score: number | null }) {
+  if (method === 'auto' || method === 'memory') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+        ✅ {method === 'memory' ? 'mémorisé' : `auto ${score !== null ? Math.round(score * 100) : '—'}%`}
+      </span>
+    );
+  }
+  if (method === 'suggestion') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+        ⚠️ suggestion {score !== null ? Math.round(score * 100) : '—'}%
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 ring-1 ring-red-200">
+      ❓ non reconnu
+    </span>
+  );
+}
+
+function itemRowClass(method: string | null) {
+  if (method === 'auto' || method === 'memory') return 'border-emerald-100 bg-emerald-50/40';
+  if (method === 'suggestion') return 'border-amber-100 bg-amber-50/40';
+  return 'border-red-100 bg-red-50/30';
+}
+
 // ── Validation modal ───────────────────────────────────────────────────────
 
 function ValidationModal({
@@ -253,6 +285,22 @@ function ValidationModal({
     setError('');
     setSubmitting(true);
     try {
+      // Mémorise les correspondances manuelles (suggestion ou none)
+      const toMemorize = unconfirmed.filter((item) => {
+        const sel = selections[item.id];
+        const isManual = item.matchMethod === 'suggestion' || item.matchMethod === 'none';
+        const changed = sel && parseInt(sel) !== item.ingredientId;
+        return isManual && sel && (changed || item.matchMethod === 'none');
+      });
+      await Promise.allSettled(
+        toMemorize.map((item) =>
+          api.post('/invoices/remember-match', {
+            rawName: item.rawName,
+            ingredientId: parseInt(selections[item.id]),
+          }),
+        ),
+      );
+
       const items = unconfirmed.map((item) => ({
         itemId: item.id,
         ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null,
@@ -282,15 +330,16 @@ function ValidationModal({
         )}
 
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_80px_80px_1fr] gap-2 border-b border-stone-100 pb-2 text-xs font-medium uppercase tracking-wide text-stone-400">
+        <div className="grid grid-cols-[1fr_70px_80px_130px_1fr] gap-2 border-b border-stone-100 pb-2 text-xs font-medium uppercase tracking-wide text-stone-400">
           <span>{t('invoices.validation.colExtracted')}</span>
           <span className="text-right">{t('invoices.validation.colQty')}</span>
           <span className="text-right">{t('invoices.validation.colUnitPrice')}</span>
+          <span>Confiance</span>
           <span>{t('invoices.validation.colLink')}</span>
         </div>
 
         {/* Items */}
-        <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
+        <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
           {unconfirmed.length === 0 ? (
             <li className="py-4 text-center text-sm text-stone-400">
               {t('invoices.validation.allConfirmed')}
@@ -299,7 +348,7 @@ function ValidationModal({
             unconfirmed.map((item) => (
               <li
                 key={item.id}
-                className="grid grid-cols-[1fr_80px_80px_1fr] items-center gap-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5"
+                className={`grid grid-cols-[1fr_70px_80px_130px_1fr] items-center gap-2 rounded-lg border px-3 py-2.5 ${itemRowClass(item.matchMethod)}`}
               >
                 {/* Raw name */}
                 <span className="truncate text-sm font-medium text-stone-800" title={item.rawName}>
@@ -318,6 +367,9 @@ function ValidationModal({
                 <span className="text-right text-sm text-stone-600">
                   {item.unitPrice !== null ? `${fmt(item.unitPrice)} €` : '—'}
                 </span>
+
+                {/* Match badge */}
+                <MatchBadge method={item.matchMethod} score={item.matchScore} />
 
                 {/* Ingredient selector */}
                 <select

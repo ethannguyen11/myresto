@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClaudeVisionService } from './claude-vision.service'
+import { MatchingService } from './matching.service'
 import { ValidateItemsDto } from './dto/validate-items.dto'
 
 @Injectable()
@@ -10,6 +11,7 @@ export class InvoicesService {
   constructor(
     private prisma: PrismaService,
     private claudeVision: ClaudeVisionService,
+    private matchingService: MatchingService,
   ) {}
 
   async findAll(userId: number) {
@@ -88,30 +90,32 @@ export class InvoicesService {
     try {
       const { parsed, rawResponse } = await this.claudeVision.analyzeInvoice(filePath, mimeType)
 
-      // Récupère les ingrédients de l'utilisateur pour le matching par nom
+      // Récupère les ingrédients de l'utilisateur pour le matching intelligent
       const userIngredients = await this.prisma.ingredient.findMany({
         where: { userId },
         select: { id: true, name: true },
       })
 
-      const itemsToCreate = parsed.items.map((item) => {
-        // Matching insensible à la casse : correspondance exacte d'abord, puis inclusion
-        const matched = userIngredients.find(
-          (ing) =>
-            ing.name.toLowerCase() === item.rawName.toLowerCase() ||
-            item.rawName.toLowerCase().includes(ing.name.toLowerCase()),
-        )
-
-        return {
-          invoiceId,
-          ingredientId: matched?.id ?? null,
-          rawName: item.rawName,
-          quantity: item.quantity,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        }
-      })
+      const itemsToCreate = await Promise.all(
+        parsed.items.map(async (item) => {
+          const match = await this.matchingService.findBestMatchWithMemory(
+            userId,
+            item.rawName,
+            userIngredients,
+          )
+          return {
+            invoiceId,
+            ingredientId: match.ingredientId,
+            rawName: item.rawName,
+            quantity: item.quantity,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            matchScore: match.score,
+            matchMethod: match.method,
+          }
+        }),
+      )
 
       await this.prisma.invoiceItem.createMany({ data: itemsToCreate })
 
@@ -203,6 +207,11 @@ export class InvoicesService {
     }
 
     return this.findOne(invoiceId, userId)
+  }
+
+  async rememberMatch(userId: number, rawName: string, ingredientId: number) {
+    await this.matchingService.rememberMatch(userId, rawName, ingredientId)
+    return { ok: true }
   }
 
   async remove(id: number, userId: number) {

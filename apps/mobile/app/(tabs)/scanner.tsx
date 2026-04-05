@@ -27,12 +27,21 @@ if (Platform.OS !== 'web') {
 
 type UploadStatus = 'idle' | 'uploading' | 'polling' | 'done' | 'validating' | 'imported' | 'error';
 
+interface Ingredient {
+  id: number;
+  name: string;
+  unit: string;
+}
+
 interface InvoiceItem {
   id: number;
   rawName: string;
   quantity: number | null;
   unit: string | null;
   unitPrice: number | null;
+  ingredientId: number | null;
+  matchScore: number | null;
+  matchMethod: string | null;
 }
 
 interface Invoice {
@@ -86,6 +95,7 @@ function ScannerNative() {
   const [permError, setPermError] = useState('');
   const [importCount, setImportCount] = useState(0);
   const [validateError, setValidateError] = useState('');
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -96,6 +106,13 @@ function ScannerNative() {
   }, []);
 
   useEffect(() => () => stopPolling(), [stopPolling]);
+
+  // Charge la liste des ingrédients au montage pour les labels de suggestion
+  useEffect(() => {
+    apiRequest<Ingredient[]>('GET', '/ingredients')
+      .then(setIngredients)
+      .catch(() => {});
+  }, []);
 
   // ── Permissions ──────────────────────────────────────────────────────────
 
@@ -214,7 +231,25 @@ function ScannerNative() {
     setStatus('validating');
     setValidateError('');
     try {
-      const confirmedItems = invoice.items.map((item) => ({ id: item.id, confirmed: true }));
+      // Mémorise les correspondances validées par suggestion ou mémoire
+      const toMemorize = invoice.items.filter(
+        (item) =>
+          item.ingredientId &&
+          (item.matchMethod === 'suggestion' || item.matchMethod === 'auto'),
+      );
+      await Promise.allSettled(
+        toMemorize.map((item) =>
+          apiRequest('POST', '/invoices/remember-match', {
+            rawName: item.rawName,
+            ingredientId: item.ingredientId,
+          }),
+        ),
+      );
+
+      const confirmedItems = invoice.items.map((item) => ({
+        itemId: item.id,
+        ingredientId: item.ingredientId ?? null,
+      }));
       await apiRequest('POST', `/invoices/${invoice.id}/validate-items`, { items: confirmedItems });
       setImportCount(invoice.items.length);
       setStatus('imported');
@@ -359,19 +394,50 @@ function ScannerNative() {
             </View>
 
             {/* Items list */}
-            {invoice.items.map((item) => (
-              <View key={item.id} style={styles.itemRow}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.rawName}</Text>
-                  {item.quantity !== null && item.unit && (
-                    <Text style={styles.itemDetail}>
-                      {Number(item.quantity).toFixed(2).replace(/\.?0+$/, '')} {item.unit}
-                    </Text>
-                  )}
+            {invoice.items.map((item) => {
+              const method = item.matchMethod;
+              const suggestedIng = item.ingredientId
+                ? ingredients.find((i) => i.id === item.ingredientId)
+                : null;
+              const isAuto = method === 'auto' || method === 'memory';
+              const isSuggestion = method === 'suggestion';
+
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.itemRow,
+                    isAuto ? styles.itemRowAuto : isSuggestion ? styles.itemRowSuggestion : styles.itemRowNone,
+                  ]}
+                >
+                  <View style={styles.itemInfo}>
+                    <View style={styles.itemNameRow}>
+                      <Text style={styles.itemMatchIcon}>
+                        {isAuto ? '✅' : isSuggestion ? '⚠️' : '❓'}
+                      </Text>
+                      <Text style={styles.itemName}>{item.rawName}</Text>
+                    </View>
+                    {suggestedIng && (
+                      <Text style={[styles.itemDetail, isAuto ? styles.detailGreen : styles.detailOrange]}>
+                        → {suggestedIng.name}
+                        {item.matchScore !== null && !isAuto
+                          ? ` (${Math.round(item.matchScore * 100)}%)`
+                          : ''}
+                      </Text>
+                    )}
+                    {!suggestedIng && method === 'none' && (
+                      <Text style={styles.detailRed}>Non reconnu</Text>
+                    )}
+                    {item.quantity !== null && item.unit && (
+                      <Text style={styles.itemDetail}>
+                        {Number(item.quantity).toFixed(2).replace(/\.?0+$/, '')} {item.unit}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.itemPrice}>{fmt(item.unitPrice)}</Text>
                 </View>
-                <Text style={styles.itemPrice}>{fmt(item.unitPrice)}</Text>
-              </View>
-            ))}
+              );
+            })}
 
             {/* Validate error */}
             {validateError ? (
@@ -638,22 +704,54 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fafaf9',
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  itemRowAuto: {
+    backgroundColor: '#f0fdf4',
+  },
+  itemRowSuggestion: {
+    backgroundColor: '#fffbeb',
+  },
+  itemRowNone: {
+    backgroundColor: '#fef2f2',
   },
   itemInfo: {
     flex: 1,
     paddingRight: 12,
+  },
+  itemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  itemMatchIcon: {
+    fontSize: 12,
   },
   itemName: {
     fontSize: 14,
     fontWeight: '500',
     color: '#1c1917',
     flexWrap: 'wrap',
+    flex: 1,
   },
   itemDetail: {
     fontSize: 12,
     color: '#a8a29e',
+    marginTop: 2,
+  },
+  detailGreen: {
+    color: '#15803d',
+    fontWeight: '500',
+  },
+  detailOrange: {
+    color: '#b45309',
+    fontWeight: '500',
+  },
+  detailRed: {
+    fontSize: 12,
+    color: '#dc2626',
     marginTop: 2,
   },
   itemPrice: {

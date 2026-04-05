@@ -121,4 +121,18 @@ model InvoiceItem {
   unitPrice      Decimal?    // prix unitaire extrait
   totalPrice     Decimal?    // prix total de la ligne
   isConfirmed    Boolean     @default(false) // validé par l'utilisateur
+  matchScore     Float?      // score de similarité 0-1
+  matchMethod    String?     // "auto" | "suggestion" | "memory" | "none"
+}
+
+// ===== MÉMOIRE DES CORRESPONDANCES FACTURES =====
+
+model InvoiceMatchMemory {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  rawName      String
+  ingredientId Int
+  confirmedAt  DateTime @default(now())
+
+  @@unique([userId, rawName])
 }

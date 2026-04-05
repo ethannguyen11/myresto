@@ -9,6 +9,7 @@ import { extname, join } from 'path'
 import * as fs from 'fs'
 import { InvoicesService } from './invoices.service'
 import { ValidateItemsDto } from './dto/validate-items.dto'
+import { RememberMatchDto } from './dto/remember-match.dto'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'invoices')
@@ -87,6 +88,11 @@ export class InvoicesController {
     @Request() req,
   ) {
     return this.invoicesService.validateItems(id, req.user.sub, dto)
+  }
+
+  @Post('remember-match')
+  rememberMatch(@Body() dto: RememberMatchDto, @Request() req) {
+    return this.invoicesService.rememberMatch(req.user.sub, dto.rawName, dto.ingredientId)
   }
 
   @Delete(':id')
