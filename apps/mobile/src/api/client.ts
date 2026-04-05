@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 
 const BASE_URL = __DEV__
   ? 'http://192.168.0.6:3000'
-  : 'https://api.chefai.fr';
+  : 'https://api-production-70f6.up.railway.app';
 
 async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem('access_token');

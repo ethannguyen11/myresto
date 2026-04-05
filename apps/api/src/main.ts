@@ -10,14 +10,16 @@ async function bootstrap() {
   });
   app.enableCors({
     origin: [
-      'http://localhost:5173',       // Vite web app
-      'http://localhost:8083',       // Expo web (mobile app on web)
-      'http://localhost:19006',      // Expo web (legacy port)
-      'http://192.168.0.6:8083',    // Expo web depuis le réseau local
+      'http://localhost:5173',
+      'http://localhost:8083',
+      'http://localhost:19006',
+      'http://192.168.0.6:8083',
+      'https://api-production-70f6.up.railway.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();
