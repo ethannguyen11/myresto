@@ -11,7 +11,7 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import { api } from '../../src/api/client';
+import { apiRequest } from '../../src/api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -140,8 +140,8 @@ export default function AdvisorScreen() {
     setReportLoading(true);
     setReportError('');
     try {
-      const res = await api.post<{ report: string; generatedAt: string }>('/advisor/report');
-      setReport(res.data.report);
+      const res = await apiRequest<{ report: string; generatedAt: string }>('POST', '/advisor/report');
+      setReport(res.report);
     } catch (err: any) {
       console.error('[Advisor] report', err);
       setReportError(err.response?.data?.message ?? 'Impossible de générer le rapport.');
@@ -161,11 +161,11 @@ export default function AdvisorScreen() {
     setChatError('');
 
     try {
-      const res = await api.post<{ reply: string }>('/advisor/chat', {
+      const res = await apiRequest<{ reply: string }>('POST', '/advisor/chat', {
         message: text,
         history: messages,
       });
-      setMessages((m) => [...m, { role: 'assistant', content: res.data.reply }]);
+      setMessages((m) => [...m, { role: 'assistant', content: res.reply }]);
     } catch (err: any) {
       console.error('[Advisor] chat', err);
       setChatError(err.response?.data?.message ?? 'Erreur IA. Réessayez.');

@@ -1,39 +1,65 @@
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 
-// Production: public API once deployed
-// Development — Android emulator: host machine is 10.0.2.2
-//             — iOS simulator / web: localhost resolves to host machine
 const BASE_URL = __DEV__
-  ? 'http://192.168.0.6:3000'  // IP locale du PC sur le réseau WiFi
-  : 'https://api.chefai.fr';    // URL de production
+  ? 'http://192.168.0.6:3000'
+  : 'https://api.chefai.fr';
 
-export const api = axios.create({
-  baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
-});
+async function getToken(): Promise<string | null> {
+  return AsyncStorage.getItem('access_token');
+}
 
-// Attach JWT token to every request
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+export async function apiRequest<T = any>(
+  method: string,
+  path: string,
+  body?: any,
+): Promise<T> {
+  const token = await getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  if (response.status === 401 && !path.includes('/auth/login')) {
+    await AsyncStorage.removeItem('access_token');
+    router.replace('/login');
   }
-  return config;
-});
 
-// Handle 401 → redirect to login (except on /auth/login itself)
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const url: string = error.config?.url ?? '';
-    if (error.response?.status === 401 && !url.includes('/auth/login')) {
-      await AsyncStorage.removeItem('access_token');
-      router.replace('/login');
-    }
-    console.error('[API]', error.config?.method?.toUpperCase(), url, error.response?.status);
-    return Promise.reject(error);
-  },
-);
+  const data = await response.json();
+  if (!response.ok) {
+    const err: any = new Error(data?.message ?? 'Request failed');
+    err.response = { status: response.status, data };
+    throw err;
+  }
+  return data;
+}
+
+export async function apiUpload<T = any>(path: string, formData: FormData): Promise<T> {
+  const token = await getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  // No Content-Type — fetch sets it automatically with the multipart boundary
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    await AsyncStorage.removeItem('access_token');
+    router.replace('/login');
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err: any = new Error(data?.message ?? 'Upload failed');
+    err.response = { status: response.status, data };
+    throw err;
+  }
+  return data;
+}

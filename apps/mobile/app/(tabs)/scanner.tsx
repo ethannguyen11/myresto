@@ -10,7 +10,7 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
-import { api } from '../../src/api/client';
+import { apiRequest, apiUpload } from '../../src/api/client';
 
 // expo-image-picker and expo-camera are native-only.
 // The if-block (not ternary) lets babel-preset-expo replace Platform.OS with
@@ -175,27 +175,22 @@ function ScannerNative() {
     } as any);
 
     try {
-      const res = await api.post<Invoice>('/invoices/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
-        },
-      });
+      const uploaded = await apiUpload<Invoice>('/invoices/upload', formData);
 
-      const invoiceId = res.data.id;
+      const invoiceId = uploaded.id;
       setStatus('polling');
       setProgress(100);
 
       // Poll every 3s until analysis is done
       pollRef.current = setInterval(async () => {
         try {
-          const poll = await api.get<Invoice>(`/invoices/${invoiceId}`);
-          setInvoice(poll.data);
+          const poll = await apiRequest<Invoice>('GET', `/invoices/${invoiceId}`);
+          setInvoice(poll);
 
-          if (poll.data.status === 'reviewed' || poll.data.status === 'validated') {
+          if (poll.status === 'reviewed' || poll.status === 'validated') {
             stopPolling();
             setStatus('done');
-          } else if (poll.data.status === 'error') {
+          } else if (poll.status === 'error') {
             stopPolling();
             setStatus('error');
             setErrorMsg('L\'analyse IA a échoué. Vérifiez la qualité de l\'image.');

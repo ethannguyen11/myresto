@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { api } from '../src/api/client';
+import { apiRequest } from '../src/api/client';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -29,11 +29,12 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      const res = await api.post<{ access_token: string; user: object }>(
+      const data = await apiRequest<{ access_token: string; user: object }>(
+        'POST',
         '/auth/login',
         { email: email.trim(), password },
       );
-      await AsyncStorage.setItem('access_token', res.data.access_token);
+      await AsyncStorage.setItem('access_token', data.access_token);
       router.replace('/(tabs)/scanner');
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Impossible de se connecter. Vérifiez vos identifiants.');
