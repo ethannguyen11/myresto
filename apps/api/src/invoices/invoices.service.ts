@@ -149,64 +149,75 @@ export class InvoicesService {
   async validateItems(invoiceId: number, userId: number, dto: ValidateItemsDto) {
     await this.findOne(invoiceId, userId)
 
-    for (const { itemId, ingredientId } of dto.items) {
-      // Si l'utilisateur fournit un ingredientId (correction ou nouveau match), on met à jour l'item d'abord
-      if (ingredientId !== undefined) {
+    try {
+      for (const { itemId, ingredientId } of dto.items) {
+        if (!itemId) continue
+
+        // Met à jour l'ingredientId si l'utilisateur en fournit un
+        if (ingredientId !== undefined) {
+          try {
+            await this.prisma.invoiceItem.update({
+              where: { id: itemId },
+              data: { ingredientId: ingredientId ?? null },
+            })
+          } catch (err) {
+            this.logger.warn(`Impossible de mettre à jour l'item #${itemId} : ${err}`)
+            continue
+          }
+        }
+
+        // Récupère l'item avec son ingredientId final
+        const item = await this.prisma.invoiceItem.findUnique({
+          where: { id: itemId },
+        })
+
+        if (!item) continue
+
+        // Met à jour le prix uniquement si on a un ingrédient ET un prix unitaire non-nul
+        if (item.ingredientId && item.unitPrice && Number(item.unitPrice) > 0) {
+          const ingredient = await this.prisma.ingredient.findFirst({
+            where: { id: item.ingredientId, userId },
+          })
+
+          if (ingredient) {
+            await this.prisma.ingredient.update({
+              where: { id: item.ingredientId },
+              data: { currentPrice: item.unitPrice },
+            })
+
+            await this.prisma.priceHistory.create({
+              data: {
+                ingredientId: item.ingredientId,
+                price: item.unitPrice,
+                source: 'invoice',
+              },
+            })
+          }
+        }
+
         await this.prisma.invoiceItem.update({
           where: { id: itemId },
-          data: { ingredientId: ingredientId ?? null },
+          data: { isConfirmed: true },
         })
       }
 
-      // Récupère l'item avec son ingredientId final
-      const item = await this.prisma.invoiceItem.findUnique({
-        where: { id: itemId },
+      // Passe la facture à "validated" si toutes les lignes sont confirmées
+      const pendingCount = await this.prisma.invoiceItem.count({
+        where: { invoiceId, isConfirmed: false },
       })
 
-      if (!item) continue
-
-      // Met à jour le prix de l'ingrédient si on a toutes les informations
-      if (item.ingredientId && item.unitPrice) {
-        // Vérifie que l'ingrédient appartient bien à l'utilisateur
-        const ingredient = await this.prisma.ingredient.findFirst({
-          where: { id: item.ingredientId, userId },
+      if (pendingCount === 0) {
+        await this.prisma.invoice.update({
+          where: { id: invoiceId },
+          data: { status: 'validated' },
         })
-
-        if (ingredient) {
-          await this.prisma.ingredient.update({
-            where: { id: item.ingredientId },
-            data: { currentPrice: item.unitPrice },
-          })
-
-          await this.prisma.priceHistory.create({
-            data: {
-              ingredientId: item.ingredientId,
-              price: item.unitPrice,
-              source: 'invoice',
-            },
-          })
-        }
       }
 
-      await this.prisma.invoiceItem.update({
-        where: { id: itemId },
-        data: { isConfirmed: true },
-      })
+      return this.findOne(invoiceId, userId)
+    } catch (error) {
+      console.error(`[validateItems] Erreur facture #${invoiceId}:`, error)
+      throw error
     }
-
-    // Passe la facture à "validated" si toutes les lignes sont confirmées
-    const pendingCount = await this.prisma.invoiceItem.count({
-      where: { invoiceId, isConfirmed: false },
-    })
-
-    if (pendingCount === 0) {
-      await this.prisma.invoice.update({
-        where: { id: invoiceId },
-        data: { status: 'validated' },
-      })
-    }
-
-    return this.findOne(invoiceId, userId)
   }
 
   async rememberMatch(userId: number, rawName: string, ingredientId: number) {
