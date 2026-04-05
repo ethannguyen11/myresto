@@ -10,6 +10,7 @@ import {
   Platform,
   SafeAreaView,
 } from 'react-native';
+import { router } from 'expo-router';
 import { apiRequest, apiUpload } from '../../src/api/client';
 
 // expo-image-picker and expo-camera are native-only.
@@ -24,7 +25,7 @@ if (Platform.OS !== 'web') {
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type UploadStatus = 'idle' | 'uploading' | 'polling' | 'done' | 'error';
+type UploadStatus = 'idle' | 'uploading' | 'polling' | 'done' | 'validating' | 'imported' | 'error';
 
 interface InvoiceItem {
   id: number;
@@ -83,6 +84,8 @@ function ScannerNative() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [permError, setPermError] = useState('');
+  const [importCount, setImportCount] = useState(0);
+  const [validateError, setValidateError] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -206,6 +209,21 @@ function ScannerNative() {
     }
   }
 
+  async function handleValidate() {
+    if (!invoice) return;
+    setStatus('validating');
+    setValidateError('');
+    try {
+      const confirmedItems = invoice.items.map((item) => ({ id: item.id, confirmed: true }));
+      await apiRequest('POST', `/invoices/${invoice.id}/validate-items`, { items: confirmedItems });
+      setImportCount(invoice.items.length);
+      setStatus('imported');
+    } catch (err: any) {
+      setValidateError(err.response?.data?.message ?? 'Échec de la validation. Réessayez.');
+      setStatus('done');
+    }
+  }
+
   function handleReset() {
     stopPolling();
     setImageUri(null);
@@ -214,6 +232,8 @@ function ScannerNative() {
     setInvoice(null);
     setErrorMsg('');
     setPermError('');
+    setImportCount(0);
+    setValidateError('');
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -322,7 +342,7 @@ function ScannerNative() {
         )}
 
         {/* Results */}
-        {status === 'done' && invoice && (
+        {(status === 'done' || status === 'validating') && invoice && (
           <View style={styles.resultsCard}>
             {/* Summary */}
             <View style={styles.resultHeader}>
@@ -353,12 +373,53 @@ function ScannerNative() {
               </View>
             ))}
 
-            {/* Scan another */}
+            {/* Validate error */}
+            {validateError ? (
+              <Text style={styles.validateError}>{validateError}</Text>
+            ) : null}
+
+            {/* Validation actions */}
+            {status === 'validating' ? (
+              <View style={styles.validatingRow}>
+                <ActivityIndicator color="#16a34a" size="small" />
+                <Text style={styles.validatingText}>Mise à jour des prix…</Text>
+              </View>
+            ) : (
+              <View style={styles.validateActions}>
+                <TouchableOpacity
+                  style={styles.importButton}
+                  onPress={handleValidate}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.importButtonText}>✅ Importer dans Chef IA</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.ignoreButton}
+                  onPress={handleReset}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.ignoreButtonText}>✖ Ignorer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Imported success */}
+        {status === 'imported' && (
+          <View style={styles.importedCard}>
+            <Text style={styles.importedTitle}>
+              ✅ {importCount} produit{importCount !== 1 ? 's' : ''} importé{importCount !== 1 ? 's' : ''} !
+            </Text>
+            <Text style={styles.importedSub}>Vos food costs ont été recalculés.</Text>
             <TouchableOpacity
-              style={styles.resetButton}
-              onPress={handleReset}
-              activeOpacity={0.8}
+              style={styles.dashboardButton}
+              onPress={() => router.push('/(tabs)/advisor')}
+              activeOpacity={0.85}
             >
+              <Text style={styles.dashboardButtonText}>Voir le dashboard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handleReset} activeOpacity={0.8}>
               <Text style={styles.resetButtonText}>Scanner une autre facture</Text>
             </TouchableOpacity>
           </View>
@@ -599,5 +660,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1c1917',
+  },
+  // Validation
+  validateError: {
+    fontSize: 13,
+    color: '#dc2626',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  validatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 16,
+    paddingVertical: 12,
+  },
+  validatingText: {
+    fontSize: 14,
+    color: '#57534e',
+    fontWeight: '500',
+  },
+  validateActions: {
+    marginTop: 16,
+    gap: 10,
+  },
+  importButton: {
+    backgroundColor: GREEN,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  importButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  ignoreButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d6d3d1',
+    backgroundColor: '#fff',
+  },
+  ignoreButtonText: {
+    color: '#78716c',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Imported success
+  importedCard: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  importedTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#15803d',
+    textAlign: 'center',
+  },
+  importedSub: {
+    fontSize: 14,
+    color: '#166534',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  dashboardButton: {
+    backgroundColor: GREEN,
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    width: '100%',
+  },
+  dashboardButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
