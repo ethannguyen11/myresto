@@ -202,7 +202,7 @@ export class InvoicesService {
               name: cleanName,
               unit: item.unit ?? 'kg',
               currentPrice: item.unitPrice!,
-              category: 'autre',
+              category: this._guessCategory(item.rawName),
               priceHistory: {
                 create: { price: item.unitPrice!, source: 'invoice' },
               },
@@ -245,6 +245,67 @@ export class InvoicesService {
   private _cleanRawName(raw: string): string {
     const lower = raw.toLowerCase().trim().replace(/\s+/g, ' ')
     return lower.charAt(0).toUpperCase() + lower.slice(1)
+  }
+
+  private _guessCategory(name: string): string {
+    const n = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+
+    const CATEGORIES: [string, string[]][] = [
+      ['viande', [
+        'beef','chicken','pork','veal','lamb','duck','turkey',
+        'boeuf','poulet','porc','veau','agneau','canard','dinde',
+        'steak','filet','entrecote','cote','saucisse','bacon',
+        'jambon','lard','magret','foie',
+      ]],
+      ['poisson', [
+        'salmon','tuna','cod','sea bass','shrimp','lobster',
+        'saumon','thon','cabillaud','bar','crevette','homard',
+        'moule','huitre','saint-jacques','dorade','sole',
+        'truite','hareng','anchois','sardine',
+      ]],
+      ['legume', [
+        'tomato','onion','garlic','carrot','potato','spinach',
+        'tomate','oignon','ail','carotte','pomme de terre',
+        'epinard','courgette','aubergine','poivron','champignon',
+        'salade','laitue','brocoli','chou','fenouil','celeri',
+      ]],
+      ['produit laitier', [
+        'butter','cream','cheese','milk','yogurt',
+        'beurre','creme','fromage','lait','yaourt',
+        'parmesan','mozzarella','gruyere','camembert',
+      ]],
+      ['epicerie', [
+        'flour','oil','vinegar','sugar','salt','pasta','rice',
+        'farine','huile','vinaigre','sucre','sel','pates','riz',
+        'fecule','levure','moutarde','sauce','ketchup',
+      ]],
+      ['condiment', [
+        'pepper','spice','herb','thyme','rosemary','basil',
+        'poivre','epice','herbe','thym','romarin','basilic',
+        'coriandre','cumin','paprika','curcuma','cannelle',
+      ]],
+      ['fruit', [
+        'apple','orange','lemon','strawberry','mango','banana',
+        'pomme','citron','fraise','mangue','banane',
+        'framboise','myrtille','poire','peche','abricot',
+      ]],
+    ]
+
+    // Map normalized category keys back to display names
+    const DISPLAY: Record<string, string> = {
+      legume: 'légume',
+      epicerie: 'épicerie',
+    }
+
+    for (const [cat, keywords] of CATEGORIES) {
+      if (keywords.some((kw) => n.includes(kw))) {
+        return DISPLAY[cat] ?? cat
+      }
+    }
+    return 'autre'
   }
 
   async rememberMatch(userId: number, rawName: string, ingredientId: number) {
