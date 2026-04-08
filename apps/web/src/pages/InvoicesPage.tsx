@@ -351,7 +351,11 @@ function ValidationModal({
                 className={`grid grid-cols-[1fr_70px_80px_130px_1fr] items-center gap-2 rounded-lg border px-3 py-2.5 ${itemRowClass(item.matchMethod)}`}
               >
                 {/* Raw name */}
-                <span className="truncate text-sm font-medium text-stone-800" title={item.rawName}>
+                <span
+                  className="text-sm font-medium text-stone-800"
+                  title={item.rawName}
+                  style={{ wordBreak: 'break-word', whiteSpace: 'normal', maxWidth: '200px', display: 'block' }}
+                >
                   {item.rawName}
                   {item.unit && (
                     <span className="ml-1 text-xs text-stone-400">({item.unit})</span>
