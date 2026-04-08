@@ -93,7 +93,7 @@ function ScannerNative() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [permError, setPermError] = useState('');
-  const [importCount, setImportCount] = useState(0);
+  const [importResult, setImportResult] = useState<{ updated: number; created: number } | null>(null);
   const [validateError, setValidateError] = useState('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -250,8 +250,10 @@ function ScannerNative() {
         itemId: item.id,
         ingredientId: item.ingredientId ?? null,
       }));
-      await apiRequest('POST', `/invoices/${invoice.id}/validate-items`, { items: confirmedItems });
-      setImportCount(invoice.items.length);
+      const resp = await apiRequest<{ updated: number; created: number; ignored: number }>(
+        'POST', `/invoices/${invoice.id}/validate-items`, { items: confirmedItems }
+      );
+      setImportResult({ updated: resp.updated, created: resp.created });
       setStatus('imported');
     } catch (err: any) {
       setValidateError(err.response?.data?.message ?? 'Échec de la validation. Réessayez.');
@@ -267,7 +269,7 @@ function ScannerNative() {
     setInvoice(null);
     setErrorMsg('');
     setPermError('');
-    setImportCount(0);
+    setImportResult(null);
     setValidateError('');
   }
 
@@ -474,9 +476,12 @@ function ScannerNative() {
         {/* Imported success */}
         {status === 'imported' && (
           <View style={styles.importedCard}>
-            <Text style={styles.importedTitle}>
-              ✅ {importCount} produit{importCount !== 1 ? 's' : ''} importé{importCount !== 1 ? 's' : ''} !
-            </Text>
+            <Text style={styles.importedTitle}>✅ Importation terminée !</Text>
+            {importResult && (
+              <Text style={styles.importedSub}>
+                {importResult.updated} prix mis à jour · {importResult.created} nouvel{importResult.created !== 1 ? 's' : ''} ingrédient{importResult.created !== 1 ? 's' : ''} créé{importResult.created !== 1 ? 's' : ''}
+              </Text>
+            )}
             <Text style={styles.importedSub}>Vos food costs ont été recalculés.</Text>
             <TouchableOpacity
               style={styles.dashboardButton}

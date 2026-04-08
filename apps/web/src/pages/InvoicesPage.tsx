@@ -278,6 +278,7 @@ function ValidationModal({
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [result, setResult] = useState<{ updated: number; created: number; ignored: number } | null>(null);
 
   const unconfirmed = invoice.items.filter((i) => !i.isConfirmed);
 
@@ -305,9 +306,12 @@ function ValidationModal({
         itemId: item.id,
         ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null,
       }));
-      await api.post(`/invoices/${invoice.id}/validate-items`, { items });
+      const res = await api.post<{ updated: number; created: number; ignored: number }>(
+        `/invoices/${invoice.id}/validate-items`, { items }
+      );
+      setResult(res.data);
       onValidated();
-      onClose();
+      setTimeout(() => onClose(), 2000);
     } catch (err: any) {
       console.error('[InvoicesPage] validate-items', err);
       setError(err.response?.data?.message ?? t('invoices.validation.error'));
@@ -327,6 +331,12 @@ function ValidationModal({
 
         {error && (
           <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</div>
+        )}
+
+        {result && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            ✅ {result.updated} prix mis à jour · {result.created} nouveau{result.created !== 1 ? 'x' : ''} ingrédient{result.created !== 1 ? 's' : ''} créé{result.created !== 1 ? 's' : ''}
+          </div>
         )}
 
         {/* Column headers */}
