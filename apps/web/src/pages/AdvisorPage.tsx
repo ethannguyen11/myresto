@@ -519,14 +519,14 @@ export function AdvisorPage() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-stone-900">{t('advisor.title')}</h1>
           <p className="mt-0.5 text-sm text-stone-500">
             {t('advisor.subtitle')}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-start sm:items-end gap-1">
           <button
             onClick={handleDownloadPdf}
             disabled={pdfLoading}

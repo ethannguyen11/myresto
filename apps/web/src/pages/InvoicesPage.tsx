@@ -93,7 +93,7 @@ function Modal({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-12 backdrop-blur-sm"
       onMouseDown={(e) => { if (e.target === ref.current) onClose(); }}
     >
-      <div className={`w-full ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl`}>
+      <div className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl`}>
         <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <h2 className="text-sm font-semibold text-stone-900">{title}</h2>
           <button
@@ -520,7 +520,7 @@ export function InvoicesPage() {
       <div className="space-y-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-stone-900">{t('invoices.title')}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
@@ -615,7 +615,7 @@ export function InvoicesPage() {
 
                       {/* Actions */}
                       <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                           {inv.status === 'reviewed' && (
                             <button
                               onClick={() => setModal({ type: 'validate', invoice: inv })}

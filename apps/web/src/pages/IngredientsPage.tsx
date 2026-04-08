@@ -455,14 +455,14 @@ export function IngredientsPage() {
       <div className="space-y-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-stone-900">{t('ingredients.title')}</h1>
             <p className="mt-0.5 text-sm text-stone-500">
               {t('ingredients.subtitle', { count: ingredients.length })}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setShowLibrary(true)}
               className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
@@ -548,9 +548,9 @@ export function IngredientsPage() {
                         {fmtDate(ing.updatedAt)}
                       </td>
 
-                      {/* Actions — visibles au hover */}
+                      {/* Actions */}
                       <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                           <button
                             onClick={() => setModal({ type: 'history', ingredient: ing })}
                             title={t('ingredients.history.title', { name: ing.name })}
