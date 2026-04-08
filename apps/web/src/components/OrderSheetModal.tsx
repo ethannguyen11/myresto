@@ -55,6 +55,7 @@ const PRINT_STYLES = `
   #order-sheet-printable, #order-sheet-printable * { visibility: visible !important; }
   #order-sheet-printable { position: fixed; inset: 0; background: white; z-index: 99999; padding: 12mm 15mm; }
   .no-print { display: none !important; }
+  .qty-input { border: none !important; border-bottom: 1.5px dotted #d6d3d1 !important; background: transparent !important; outline: none !important; -webkit-appearance: none; }
   @page { size: A4 portrait; margin: 0; }
 }
 `;
@@ -69,6 +70,7 @@ export function OrderSheetModal({ onClose }: { onClose: () => void }) {
   const [restaurant, setRestaurant] = useState('Mon Restaurant');
   const [date, setDate] = useState(todayStr());
   const [deadline, setDeadline] = useState('16h00');
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Inject print styles
@@ -230,15 +232,28 @@ export function OrderSheetModal({ onClose }: { onClose: () => void }) {
                           {/* Dotted line */}
                           <span
                             className="flex-1"
+                            style={{ borderBottom: '1.5px dotted #d6d3d1', minWidth: '24px' }}
+                          />
+                          {/* Editable quantity */}
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            placeholder="0"
+                            value={quantities[ing.id] ?? ''}
+                            onChange={(e) =>
+                              setQuantities((q) => ({ ...q, [ing.id]: e.target.value }))
+                            }
+                            className="qty-input flex-shrink-0 text-right text-sm font-medium text-stone-800"
                             style={{
+                              width: '60px',
                               borderBottom: '1.5px dotted #d6d3d1',
-                              minWidth: '40px',
+                              background: 'transparent',
+                              outline: 'none',
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'textfield',
                             }}
                           />
-                          {/* Qty space */}
-                          <span className="w-12 flex-shrink-0 text-xs text-stone-300">
-                            {t('orderSheet.qty')}
-                          </span>
                         </div>
                       ))}
                     </div>
