@@ -230,6 +230,23 @@
     },
     "loadError": "Impossible de charger les factures."
   },
+  "library": {
+    "button": "Bibliothèque",
+    "title": "Bibliothèque d'ingrédients",
+    "subtitle": "500 ingrédients français prêts à importer dans votre catalogue",
+    "searchPlaceholder": "Rechercher un ingrédient…",
+    "all": "Tous",
+    "selectAll": "Tout sélectionner",
+    "selectedCount_one": "{{count}} sélectionné",
+    "selectedCount_other": "{{count}} sélectionnés",
+    "import_one": "Importer {{count}} ingrédient",
+    "import_other": "Importer {{count}} ingrédients",
+    "importing": "Importation…",
+    "importSuccess": "{{imported}} importé(s), {{skipped}} déjà présent(s).",
+    "importError": "Erreur lors de l'importation.",
+    "loadError": "Impossible de charger la bibliothèque.",
+    "empty": "Aucun ingrédient trouvé."
+  },
   "orderSheet": {
     "button": "Fiche de commande",
     "title": "Fiche de commande",

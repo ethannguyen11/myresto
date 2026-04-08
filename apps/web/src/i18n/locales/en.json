@@ -230,6 +230,23 @@
     },
     "loadError": "Unable to load invoices."
   },
+  "library": {
+    "button": "Library",
+    "title": "Ingredient library",
+    "subtitle": "500 French ingredients ready to import into your catalog",
+    "searchPlaceholder": "Search an ingredient…",
+    "all": "All",
+    "selectAll": "Select all",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "import_one": "Import {{count}} ingredient",
+    "import_other": "Import {{count}} ingredients",
+    "importing": "Importing…",
+    "importSuccess": "{{imported}} imported, {{skipped}} already present.",
+    "importError": "Import failed.",
+    "loadError": "Unable to load library.",
+    "empty": "No ingredients found."
+  },
   "orderSheet": {
     "button": "Order sheet",
     "title": "Order sheet",

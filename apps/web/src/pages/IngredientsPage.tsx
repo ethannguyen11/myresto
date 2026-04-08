@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { OrderSheetModal } from '../components/OrderSheetModal';
+import { LibraryModal } from '../components/LibraryModal';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -389,6 +390,7 @@ export function IngredientsPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const [showOrderSheet, setShowOrderSheet] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
 
   async function load() {
     try {
@@ -461,6 +463,12 @@ export function IngredientsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowLibrary(true)}
+              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+            >
+              📚 {t('library.button')}
+            </button>
             <button
               onClick={() => setShowOrderSheet(true)}
               className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
@@ -619,6 +627,13 @@ export function IngredientsPage() {
 
       {showOrderSheet && (
         <OrderSheetModal onClose={() => setShowOrderSheet(false)} />
+      )}
+
+      {showLibrary && (
+        <LibraryModal
+          onClose={() => setShowLibrary(false)}
+          onImported={() => { load(); }}
+        />
       )}
     </>
   );
