@@ -230,6 +230,20 @@
     },
     "loadError": "Unable to load invoices."
   },
+  "orderSheet": {
+    "button": "Order sheet",
+    "title": "Order sheet",
+    "heading": "Supplier order form",
+    "restaurantPlaceholder": "Restaurant name",
+    "orderBefore": "Order before {{time}}",
+    "print": "Print",
+    "ingredientCount_one": "{{count}} ingredient",
+    "ingredientCount_other": "{{count}} ingredients",
+    "qty": "Qty",
+    "notes": "Notes",
+    "empty": "No ingredients to display.",
+    "loadError": "Unable to load order sheet."
+  },
   "advisor": {
     "title": "AI Advisor",
     "subtitle": "Intelligent analysis of your profitability and personalized recommendations",

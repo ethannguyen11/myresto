@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
+import { OrderSheetModal } from '../components/OrderSheetModal';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -387,6 +388,7 @@ export function IngredientsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ActiveModal | null>(null);
+  const [showOrderSheet, setShowOrderSheet] = useState(false);
 
   async function load() {
     try {
@@ -458,13 +460,21 @@ export function IngredientsPage() {
               {t('ingredients.subtitle', { count: ingredients.length })}
             </p>
           </div>
-          <button
-            onClick={() => setModal({ type: 'create' })}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-          >
-            <span className="text-base leading-none">+</span>
-            {t('ingredients.add')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowOrderSheet(true)}
+              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+            >
+              🖨️ {t('orderSheet.button')}
+            </button>
+            <button
+              onClick={() => setModal({ type: 'create' })}
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              <span className="text-base leading-none">+</span>
+              {t('ingredients.add')}
+            </button>
+          </div>
         </div>
 
         {/* Empty state */}
@@ -605,6 +615,10 @@ export function IngredientsPage() {
           ingredient={modal.ingredient}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {showOrderSheet && (
+        <OrderSheetModal onClose={() => setShowOrderSheet(false)} />
       )}
     </>
   );

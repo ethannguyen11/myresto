@@ -17,6 +17,12 @@ export class IngredientsController {
     return this.ingredientsService.findAll(req.user.sub)
   }
 
+  // Doit être avant @Get(':id') pour ne pas intercepter "order-sheet" comme un ID
+  @Get('order-sheet')
+  getOrderSheet(@Request() req) {
+    return this.ingredientsService.getOrderSheet(req.user.sub)
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.ingredientsService.findOne(id, req.user.sub)

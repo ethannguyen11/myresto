@@ -91,6 +91,27 @@ export class IngredientsService {
     return this.prisma.ingredient.delete({ where: { id } })
   }
 
+  // Retourne les ingrédients groupés par catégorie pour la fiche de commande
+  async getOrderSheet(userId: number) {
+    const ingredients = await this.prisma.ingredient.findMany({
+      where: { userId },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, unit: true, currentPrice: true, category: true },
+    })
+
+    const groups = new Map<string, typeof ingredients>()
+    for (const ing of ingredients) {
+      const cat = ing.category ?? 'autre'
+      if (!groups.has(cat)) groups.set(cat, [])
+      groups.get(cat)!.push(ing)
+    }
+
+    return {
+      categories: Array.from(groups.entries()).map(([name, items]) => ({ name, ingredients: items })),
+      total: ingredients.length,
+    }
+  }
+
   // Récupère l'historique des prix d'un ingrédient
   async getPriceHistory(id: number, userId: number) {
     await this.findOne(id, userId)

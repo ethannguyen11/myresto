@@ -230,6 +230,20 @@
     },
     "loadError": "Impossible de charger les factures."
   },
+  "orderSheet": {
+    "button": "Fiche de commande",
+    "title": "Fiche de commande",
+    "heading": "Bon de commande fournisseurs",
+    "restaurantPlaceholder": "Nom du restaurant",
+    "orderBefore": "Commande avant {{time}}",
+    "print": "Imprimer",
+    "ingredientCount_one": "{{count}} ingrédient",
+    "ingredientCount_other": "{{count}} ingrédients",
+    "qty": "Qté",
+    "notes": "Notes",
+    "empty": "Aucun ingrédient à afficher.",
+    "loadError": "Impossible de charger la fiche de commande."
+  },
   "advisor": {
     "title": "Conseiller IA",
     "subtitle": "Analyse intelligente de votre rentabilité et recommandations personnalisées",
