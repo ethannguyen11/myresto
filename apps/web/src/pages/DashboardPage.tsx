@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer,
+} from 'recharts';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -36,80 +40,55 @@ interface DashboardData {
   priceEvolution: PriceEvolution[];
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function foodCostColor(pct: number): string {
-  if (pct <= 25) return 'text-emerald-600';
-  if (pct <= 30) return 'text-amber-500';
-  return 'text-red-500';
-}
-
-function foodCostBadge(pct: number): string {
-  if (pct <= 25) return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
-  if (pct <= 30) return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
-  return 'bg-red-50 text-red-700 ring-1 ring-red-200';
-}
-
-function avgFoodCostBg(pct: number): string {
-  if (pct <= 25) return 'bg-emerald-500';
-  if (pct <= 30) return 'bg-amber-500';
-  return 'bg-red-500';
-}
-
-function alertIcon(alert: string): string {
-  if (alert.startsWith('⚠️')) return 'bg-red-50 border-red-100';
-  if (alert.startsWith('📈')) return 'bg-amber-50 border-amber-100';
-  return 'bg-blue-50 border-blue-100';
-}
-
-function fmt(n: number, decimals = 2): string {
-  return n.toFixed(decimals).replace('.', ',');
-}
-
-// ── Weekly alert banner ────────────────────────────────────────────────────
-
 type AlertSeverity = 'info' | 'warning' | 'critical';
-
 interface WeeklyAlertData {
   alert: string;
   generatedAt: string;
   severity: AlertSeverity;
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function fmt(n: number, dec = 2): string {
+  return n.toFixed(dec).replace('.', ',');
+}
+
+const LINE_COLORS = [
+  '#10b981', '#3b82f6', '#f59e0b', '#ef4444',
+  '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+];
+
+// ── Weekly alert banner ────────────────────────────────────────────────────
+
 function WeeklyAlertBanner() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [data, setData] = useState<WeeklyAlertData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     api.get<WeeklyAlertData>('/advisor/weekly-alert')
       .then((res) => setData(res.data))
-      .catch(() => { /* silently skip — non-critical */ })
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
-  if (loading || !data || dismissed) return null;
+  if (!data || dismissed) return null;
 
   const styles: Record<AlertSeverity, { wrapper: string; dot: string; label: string; btn: string }> = {
     info: {
-      wrapper: 'border-emerald-200 bg-emerald-50',
-      dot: 'bg-emerald-500',
-      label: 'text-emerald-800',
-      btn: 'border-emerald-300 text-emerald-700 hover:bg-emerald-100',
+      wrapper: 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20',
+      dot: 'bg-emerald-500', label: 'text-emerald-800 dark:text-emerald-300',
+      btn: 'border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30',
     },
     warning: {
-      wrapper: 'border-amber-200 bg-amber-50',
-      dot: 'bg-amber-500',
-      label: 'text-amber-800',
-      btn: 'border-amber-300 text-amber-700 hover:bg-amber-100',
+      wrapper: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20',
+      dot: 'bg-amber-500', label: 'text-amber-800 dark:text-amber-300',
+      btn: 'border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30',
     },
     critical: {
-      wrapper: 'border-red-200 bg-red-50',
-      dot: 'bg-red-500',
-      label: 'text-red-800',
-      btn: 'border-red-300 text-red-700 hover:bg-red-100',
+      wrapper: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20',
+      dot: 'bg-red-500', label: 'text-red-800 dark:text-red-300',
+      btn: 'border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30',
     },
   };
 
@@ -127,20 +106,11 @@ function WeeklyAlertBanner() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className={`inline-flex h-2 w-2 rounded-full ${s.dot}`} />
-              <span className={`text-xs font-semibold uppercase tracking-wide ${s.label}`}>
-                {severityLabel}
-              </span>
+              <span className={`text-xs font-semibold uppercase tracking-wide ${s.label}`}>{severityLabel}</span>
             </div>
             <p className={`mt-1.5 text-sm leading-relaxed ${s.label}`}>{data.alert}</p>
-            <p className="mt-1 text-xs opacity-60" style={{ color: 'inherit' }}>
-              {t('dashboard.weekly.generatedOn')}{' '}
-              {new Date(data.generatedAt).toLocaleDateString('fr-FR', {
-                day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
-              })}
-            </p>
           </div>
         </div>
-
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             onClick={() => navigate('/advisor')}
@@ -150,7 +120,7 @@ function WeeklyAlertBanner() {
           </button>
           <button
             onClick={() => setDismissed(true)}
-            className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-600"
+            className="rounded-lg p-1.5 text-stone-400 transition-colors hover:bg-black/5 hover:text-stone-600 dark:hover:bg-white/5"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -162,68 +132,33 @@ function WeeklyAlertBanner() {
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────
+// ── Quick action card ──────────────────────────────────────────────────────
 
-function KpiCard({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: string;
-}) {
+function QuickAction({
+  icon, title, desc, onClick,
+}: { icon: string; title: string; desc: string; onClick: () => void }) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-stone-400">{label}</p>
-      <p className={`mt-1 text-3xl font-semibold tracking-tight ${accent ?? 'text-stone-900'}`}>
-        {value}
-      </p>
-      {sub && <p className="mt-1 text-xs text-stone-500">{sub}</p>}
-    </div>
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-start rounded-2xl border border-stone-200 bg-white p-6 text-left shadow-sm transition-all hover:scale-[1.02] hover:border-emerald-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-600"
+    >
+      <span className="text-4xl transition-transform group-hover:scale-110">{icon}</span>
+      <p className="mt-4 text-sm font-semibold text-stone-800 dark:text-white">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-stone-400 dark:text-gray-400">{desc}</p>
+    </button>
   );
 }
 
-function RecipeTable({ rows, title }: { rows: RecipeSummary[]; title: string }) {
-  const { t } = useTranslation();
-  if (rows.length === 0) return null;
+// ── KPI card ───────────────────────────────────────────────────────────────
+
+function KpiCard({ icon, label, value, accent }: { icon: string; label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-      <div className="border-b border-stone-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-stone-700">{title}</h2>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
-              <th className="px-5 py-3">{t('dashboard.tables.recipe')}</th>
-              <th className="px-5 py-3">{t('dashboard.tables.category')}</th>
-              <th className="px-5 py-3 text-right">{t('dashboard.tables.sellingPrice')}</th>
-              <th className="px-5 py-3 text-right">{t('dashboard.tables.foodCost')}</th>
-              <th className="px-5 py-3 text-right">{t('dashboard.tables.margin')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-stone-50">
-                <td className="px-5 py-3 font-medium text-stone-800">{r.name}</td>
-                <td className="px-5 py-3 text-stone-500">{r.category ?? '—'}</td>
-                <td className="px-5 py-3 text-right text-stone-700">{fmt(r.sellingPrice)} €</td>
-                <td className="px-5 py-3 text-right">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${foodCostBadge(r.foodCostPercent)}`}>
-                    {fmt(r.foodCostPercent, 1)} %
-                  </span>
-                </td>
-                <td className={`px-5 py-3 text-right font-semibold ${foodCostColor(r.foodCostPercent)}`}>
-                  {fmt(r.profitPerDish)} €
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-transform hover:scale-[1.02] dark:border-gray-700 dark:bg-gray-800">
+      <span className="text-3xl">{icon}</span>
+      <p className={`mt-3 text-2xl font-bold tracking-tight ${accent ?? 'text-stone-900 dark:text-white'}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs font-medium text-stone-400 dark:text-gray-400">{label}</p>
     </div>
   );
 }
@@ -232,16 +167,15 @@ function RecipeTable({ rows, title }: { rows: RecipeSummary[]; title: string }) 
 
 export function DashboardPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<DashboardData>('/dashboard')
+    api.get<DashboardData>('/dashboard')
       .then((res) => setData(res.data))
       .catch((err) => {
-        console.error('[DashboardPage] GET /dashboard', err);
         setError(err.response?.data?.message ?? 'Impossible de charger le tableau de bord.');
       })
       .finally(() => setLoading(false));
@@ -257,7 +191,7 @@ export function DashboardPage() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700">
+      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
         {error}
       </div>
     );
@@ -265,124 +199,150 @@ export function DashboardPage() {
 
   if (!data) return null;
 
-  const { summary, alerts, topProfitable, topExpensive, priceEvolution } = data;
+  const { summary, priceEvolution } = data;
+  const fc = summary.averageFoodCost;
+  const fcColor = fc <= 25 ? 'text-emerald-400' : fc <= 30 ? 'text-amber-400' : 'text-red-400';
+  const fcTrend = fc <= 30 ? `↓ En dessous du seuil 30 %` : `↑ Au-dessus du seuil 30 %`;
 
-  const fcSub =
-    summary.averageFoodCost <= 25
-      ? t('dashboard.kpi.fcExcellent')
-      : summary.averageFoodCost <= 30
-        ? t('dashboard.kpi.fcCorrect')
-        : t('dashboard.kpi.fcImprove');
+  // Build LineChart data: 2 points (début → maintenant) per ingredient
+  const chartData = priceEvolution.length > 0
+    ? [
+        {
+          name: 'Début',
+          ...Object.fromEntries(priceEvolution.map((p) => [p.ingredientName, p.firstPrice])),
+        },
+        {
+          name: 'Maintenant',
+          ...Object.fromEntries(priceEvolution.map((p) => [p.ingredientName, p.lastPrice])),
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">{t('dashboard.title')}</h1>
-        <p className="mt-0.5 text-sm text-stone-500">{t('dashboard.subtitle')}</p>
+        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('dashboard.title')}</h1>
+        <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">{t('dashboard.subtitle')}</p>
       </div>
 
-      {/* ── Alerte hebdomadaire ── */}
+      {/* Weekly alert banner */}
       <WeeklyAlertBanner />
+
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-8 text-white shadow-lg">
+        {/* Decorative circles */}
+        <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-16 right-8 h-64 w-64 rounded-full bg-white/5" />
+
+        <div className="relative">
+          <p className="text-sm font-medium text-emerald-200">Food Cost Moyen</p>
+          <p className={`mt-1 text-6xl font-black tracking-tight ${fcColor.replace('text-', 'text-')}`}
+            style={{ color: 'white', opacity: 1 }}>
+            {fmt(fc, 1)} %
+          </p>
+          <p className="mt-2 text-sm text-emerald-200">{fcTrend}</p>
+          <p className="mt-0.5 text-xs text-emerald-300">Rentabilité de votre carte</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+              {summary.totalRecipes} recette{summary.totalRecipes !== 1 ? 's' : ''}
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+              {summary.rentableCount} rentable{summary.rentableCount !== 1 ? 's' : ''}
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+              {fmt(summary.totalPotentialProfit)} € / service
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
+          icon="🍽️"
           label={t('dashboard.kpi.totalRecipes')}
           value={String(summary.totalRecipes)}
-          sub={t('dashboard.kpi.rentableSub', { rentable: summary.rentableCount, nonRentable: summary.nonRentableCount })}
         />
         <KpiCard
+          icon="💰"
           label={t('dashboard.kpi.avgFoodCost')}
-          value={`${fmt(summary.averageFoodCost, 1)} %`}
-          sub={fcSub}
-          accent={avgFoodCostBg(summary.averageFoodCost).replace('bg-', 'text-').replace('-500', '-600')}
+          value={`${fmt(fc, 1)} %`}
+          accent={fc <= 25 ? 'text-emerald-600 dark:text-emerald-400' : fc <= 30 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}
         />
         <KpiCard
-          label={t('dashboard.kpi.rentableRatio')}
+          icon="✅"
+          label="Recettes rentables"
           value={`${summary.rentableCount} / ${summary.totalRecipes}`}
-          sub={
-            summary.totalRecipes > 0
-              ? t('dashboard.kpi.ratioSub', { pct: Math.round((summary.rentableCount / summary.totalRecipes) * 100) })
-              : undefined
-          }
+          accent="text-stone-900 dark:text-white"
         />
         <KpiCard
+          icon="📈"
           label={t('dashboard.kpi.profit')}
           value={`${fmt(summary.totalPotentialProfit)} €`}
-          sub={t('dashboard.kpi.profitSub')}
-          accent="text-emerald-600"
+          accent="text-emerald-600 dark:text-emerald-400"
         />
       </div>
 
-      {/* ── Alertes ── */}
-      {alerts.length > 0 && (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-          <div className="border-b border-stone-100 px-5 py-4">
-            <h2 className="text-sm font-semibold text-stone-700">
-              {t('dashboard.alerts.title')}{' '}
-              <span className="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
-                {alerts.length}
-              </span>
-            </h2>
-          </div>
-          <ul className="divide-y divide-stone-100 p-2">
-            {alerts.map((alert, i) => (
-              <li
-                key={i}
-                className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${alertIcon(alert)}`}
-              >
-                <span className="mt-px shrink-0 text-base leading-none">
-                  {alert.slice(0, 2)}
-                </span>
-                <span className="text-stone-700">{alert.slice(3)}</span>
-              </li>
-            ))}
-          </ul>
+      {/* ── Quick actions ── */}
+      <div>
+        <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
+          Actions rapides
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <QuickAction
+            icon="📸"
+            title="Scanner une facture"
+            desc="Importez et analysez automatiquement vos factures fournisseurs"
+            onClick={() => navigate('/invoices')}
+          />
+          <QuickAction
+            icon="➕"
+            title="Nouvelle recette"
+            desc="Créez une recette et calculez son food cost en temps réel"
+            onClick={() => navigate('/recipes')}
+          />
+          <QuickAction
+            icon="📚"
+            title="Bibliothèque"
+            desc="Importez des ingrédients depuis la bibliothèque nationale"
+            onClick={() => navigate('/ingredients')}
+          />
         </div>
-      )}
-
-      {/* ── Tables côte à côte sur grand écran ── */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        <RecipeTable title={t('dashboard.tables.topProfitable')} rows={topProfitable} />
-        <RecipeTable title={t('dashboard.tables.topExpensive')} rows={topExpensive} />
       </div>
 
-      {/* ── Évolution des prix ── */}
-      {priceEvolution.length > 0 && (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-          <div className="border-b border-stone-100 px-5 py-4">
-            <h2 className="text-sm font-semibold text-stone-700">{t('dashboard.priceEvolution.title')}</h2>
-          </div>
-          <ul className="divide-y divide-stone-100">
-            {priceEvolution.map((item) => {
-              const positive = item.variationPercent >= 0;
-              return (
-                <li key={item.ingredientName} className="flex items-center gap-4 px-5 py-3.5">
-                  <span className="flex-1 text-sm font-medium text-stone-800">
-                    {item.ingredientName}
-                  </span>
-                  <span className="text-sm text-stone-400">
-                    {fmt(item.firstPrice)} € → {fmt(item.lastPrice)} €
-                  </span>
-                  <span
-                    className={`w-20 rounded-full px-2 py-0.5 text-right text-xs font-semibold ${
-                      positive
-                        ? 'bg-red-50 text-red-600'
-                        : 'bg-emerald-50 text-emerald-600'
-                    }`}
-                  >
-                    {positive ? '+' : ''}
-                    {fmt(item.variationPercent, 1)} %
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+      {/* ── Price evolution LineChart ── */}
+      {chartData.length > 0 && (
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-gray-200">
+            {t('dashboard.priceEvolution.title')}
+          </h2>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#78716c' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#78716c' }} unit=" €" width={56} />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4' }}
+                formatter={(v: number) => [`${v.toFixed(2)} €`]}
+              />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
+              {priceEvolution.map((p, i) => (
+                <Line
+                  key={p.ingredientName}
+                  type="monotone"
+                  dataKey={p.ingredientName}
+                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       )}
-
     </div>
   );
 }
