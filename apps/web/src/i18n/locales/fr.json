@@ -277,6 +277,14 @@
       "message": "Supprimer la facture {{name}} et toutes ses lignes ? Cette action est irréversible."
     },
     "loadError": "Impossible de charger les factures.",
+    "scan": {
+      "confirm_title": "C'est bien une facture ?",
+      "confirm_subtitle": "Vérifiez que la photo est lisible et contient des prix",
+      "retake": "Reprendre",
+      "analyze": "Analyser",
+      "invalid_image": "Cette image ne semble pas être une facture. Raison : {{reason}}",
+      "file_too_small": "Photo trop petite, veuillez réessayer"
+    },
     "filters": {
       "searchPlaceholder": "Rechercher un fournisseur…",
       "allStatuses": "Tous les statuts",

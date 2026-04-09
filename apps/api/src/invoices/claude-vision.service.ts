@@ -28,6 +28,56 @@ export class ClaudeVisionService {
     })
   }
 
+  async validateInvoiceImage(
+    filePath: string,
+    mimeType: string,
+  ): Promise<{ valid: boolean; reason: string }> {
+    const fileBuffer = fs.readFileSync(filePath)
+    const base64 = fileBuffer.toString('base64')
+
+    const isPdf = mimeType === 'application/pdf'
+    const fileContent: Anthropic.MessageParam['content'][number] = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+      : {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: base64,
+          },
+        }
+
+    const message = await this.client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            fileContent,
+            {
+              type: 'text',
+              text: `This image is supposed to be an invoice or receipt. Reply ONLY with a JSON: { "valid": boolean, "reason": string }
+- valid: true if the image clearly contains an invoice, receipt, or order document with prices/amounts
+- valid: false otherwise (photo of food, empty table, blurry, etc.)
+- reason: one short sentence explaining`,
+            },
+          ],
+        },
+      ],
+    })
+
+    const raw = message.content[0].type === 'text' ? message.content[0].text : ''
+    try {
+      const cleaned = raw.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim()
+      return JSON.parse(cleaned) as { valid: boolean; reason: string }
+    } catch {
+      // If Claude's response can't be parsed, let the upload through rather than block a valid invoice
+      this.logger.warn('Réponse de validation non parseable, image acceptée par défaut', raw)
+      return { valid: true, reason: 'Validation ignorée' }
+    }
+  }
+
   async analyzeInvoice(
     filePath: string,
     mimeType: string,

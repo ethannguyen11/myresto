@@ -277,6 +277,14 @@
       "message": "Delete invoice {{name}} and all its lines? This action is irreversible."
     },
     "loadError": "Unable to load invoices.",
+    "scan": {
+      "confirm_title": "Is this an invoice?",
+      "confirm_subtitle": "Make sure the photo is legible and contains prices",
+      "retake": "Retake",
+      "analyze": "Analyze",
+      "invalid_image": "This image does not appear to be an invoice. Reason: {{reason}}",
+      "file_too_small": "Photo too small, please try again"
+    },
     "filters": {
       "searchPlaceholder": "Search a supplier…",
       "allStatuses": "All statuses",

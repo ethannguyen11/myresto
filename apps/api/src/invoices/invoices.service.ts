@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException, BadRequestException, UnprocessableEntityException } from '@nestjs/common'
+import * as fs from 'fs'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClaudeVisionService } from './claude-vision.service'
 import { MatchingService } from './matching.service'
@@ -41,6 +42,18 @@ export class InvoicesService {
 
   // Crée la facture et déclenche l'analyse en arrière-plan
   async upload(userId: number, file: Express.Multer.File) {
+    // ── Pré-validation : vérifie que l'image est bien une facture ──────────
+    const validation = await this.claudeVision.validateInvoiceImage(file.path, file.mimetype)
+    if (!validation.valid) {
+      this.logger.warn(
+        `Image rejetée — userId=${userId} timestamp=${new Date().toISOString()} reason="${validation.reason}"`,
+      )
+      try { fs.unlinkSync(file.path) } catch { /* fichier déjà supprimé ou inaccessible */ }
+      throw new UnprocessableEntityException(
+        `Cette image ne semble pas être une facture. Raison : ${validation.reason}`,
+      )
+    }
+
     const invoice = await this.prisma.invoice.create({
       data: {
         userId,

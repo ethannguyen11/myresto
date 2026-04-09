@@ -86,8 +86,11 @@ export default function ScannerScreen() {
   return <ScannerNative />;
 }
 
+const FILE_SIZE_MIN = 50 * 1024; // 50 KB
+
 function ScannerNative() {
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [fileSizeBytes, setFileSizeBytes] = useState(0);
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -148,7 +151,7 @@ function ScannerNative() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      resetAndSetImage(result.assets[0].uri);
+      resetAndSetImage(result.assets[0].uri, result.assets[0].fileSize ?? 0);
     }
   }
 
@@ -164,13 +167,14 @@ function ScannerNative() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      resetAndSetImage(result.assets[0].uri);
+      resetAndSetImage(result.assets[0].uri, result.assets[0].fileSize ?? 0);
     }
   }
 
-  function resetAndSetImage(uri: string) {
+  function resetAndSetImage(uri: string, fileSize = 0) {
     stopPolling();
     setImageUri(uri);
+    setFileSizeBytes(fileSize);
     setStatus('idle');
     setProgress(0);
     setInvoice(null);
@@ -264,6 +268,7 @@ function ScannerNative() {
   function handleReset() {
     stopPolling();
     setImageUri(null);
+    setFileSizeBytes(0);
     setStatus('idle');
     setProgress(0);
     setInvoice(null);
@@ -325,19 +330,36 @@ function ScannerNative() {
 
             {status === 'idle' && (
               <View style={styles.previewActions}>
+                {/* Confirmation header */}
+                <View style={styles.confirmHeader}>
+                  <Text style={styles.confirmTitle}>C'est bien une facture ?</Text>
+                  <Text style={styles.confirmSubtitle}>
+                    Vérifiez que la photo est lisible et contient des prix
+                  </Text>
+                </View>
+
+                {/* File size warning */}
+                {fileSizeBytes > 0 && fileSizeBytes < FILE_SIZE_MIN && (
+                  <View style={styles.warnCard}>
+                    <Text style={styles.warnText}>
+                      ⚠️ Photo trop petite, veuillez réessayer
+                    </Text>
+                  </View>
+                )}
+
                 <TouchableOpacity
                   style={styles.analyzeButton}
                   onPress={handleAnalyze}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.analyzeButtonText}>Analyser cette facture</Text>
+                  <Text style={styles.analyzeButtonText}>Analyser</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.resetButton}
                   onPress={handleReset}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.resetButtonText}>Changer de fichier</Text>
+                  <Text style={styles.resetButtonText}>Reprendre</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -846,5 +868,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Confirmation panel
+  confirmHeader: {
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1c1917',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  confirmSubtitle: {
+    fontSize: 13,
+    color: '#78716c',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  warnCard: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  warnText: {
+    fontSize: 13,
+    color: '#92400e',
+    textAlign: 'center',
   },
 });
