@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -54,6 +55,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function AnalyticsPage() {
+  const { t } = useTranslation();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,7 +65,7 @@ export function AnalyticsPage() {
   useEffect(() => {
     api.get<Recipe[]>('/recipes')
       .then((r) => setRecipes(r.data))
-      .catch(() => setError('Impossible de charger les recettes.'))
+      .catch(() => setError(t('analytics.loadError')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -108,7 +110,7 @@ export function AnalyticsPage() {
   // Pie: cost per category
   const catMap: Record<string, number> = {};
   for (const r of recipes) {
-    const cat = r.category ?? 'Autre';
+    const cat = r.category ?? t('analytics.otherCategory');
     catMap[cat] = (catMap[cat] ?? 0) + r.foodCost.totalCost;
   }
   const pieData = Object.entries(catMap).map(([name, value]) => ({
@@ -132,9 +134,9 @@ export function AnalyticsPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">📊 Analytiques</h1>
+        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('analytics.title')}</h1>
         <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
-          Analyse détaillée de la rentabilité de votre carte
+          {t('analytics.subtitle')}
         </p>
       </div>
 
@@ -142,7 +144,7 @@ export function AnalyticsPage() {
       {top3.length > 0 && (
         <div>
           <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
-            Meilleures marges
+            {t('analytics.topMargins')}
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {top3.map((r, i) => (
@@ -163,7 +165,7 @@ export function AnalyticsPage() {
                 {/* Food cost bar */}
                 <div className="mt-4">
                   <div className="mb-1 flex items-center justify-between text-xs text-stone-400 dark:text-gray-500">
-                    <span>Food cost</span>
+                    <span>{t('analytics.foodCostLabel')}</span>
                     <span className={`font-semibold ${foodCostColor(r.foodCost.foodCostPercent)}`}>
                       {fmt(r.foodCost.foodCostPercent, 1)} %
                     </span>
@@ -187,7 +189,7 @@ export function AnalyticsPage() {
           {/* Pie chart */}
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-gray-200">
-              Coût ingrédients par catégorie
+              {t('analytics.pieTitle')}
             </h2>
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -205,7 +207,7 @@ export function AnalyticsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number) => [`${v.toFixed(2)} €`, 'Coût']}
+                  formatter={(v: number) => [`${v.toFixed(2)} €`, t('analytics.pieCostLabel')]}
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -216,23 +218,23 @@ export function AnalyticsPage() {
           {/* Summary stats */}
           <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-gray-200">
-              Résumé global
+              {t('analytics.summaryTitle')}
             </h2>
             <div className="space-y-4">
               {[
-                { label: 'Food cost moyen', value: `${fmt(avgFC, 1)} %`, color: foodCostColor(avgFC) },
+                { label: t('analytics.summary.avgFoodCost'), value: `${fmt(avgFC, 1)} %`, color: foodCostColor(avgFC) },
                 {
-                  label: 'Recettes rentables',
+                  label: t('analytics.summary.profitable'),
                   value: `${recipes.filter((r) => r.foodCost.isRentable).length} / ${recipes.length}`,
                   color: 'text-stone-800 dark:text-white',
                 },
                 {
-                  label: 'Profit total / service',
+                  label: t('analytics.summary.totalProfit'),
                   value: `${fmt(recipes.reduce((s, r) => s + r.foodCost.profitPerDish, 0))} €`,
                   color: 'text-emerald-600 dark:text-emerald-400',
                 },
                 {
-                  label: 'Recettes non rentables',
+                  label: t('analytics.summary.nonProfitable'),
                   value: String(recipes.filter((r) => !r.foodCost.isRentable).length),
                   color: 'text-red-600 dark:text-red-400',
                 },
@@ -251,7 +253,7 @@ export function AnalyticsPage() {
       <div className="rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="border-b border-stone-100 px-5 py-4 dark:border-gray-700">
           <h2 className="text-sm font-semibold text-stone-700 dark:text-gray-200">
-            Toutes les recettes
+            {t('analytics.tableTitle')}
             <span className="ml-2 text-stone-400 dark:text-gray-500 font-normal">({recipes.length})</span>
           </h2>
         </div>
@@ -260,19 +262,19 @@ export function AnalyticsPage() {
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50 text-left dark:border-gray-700 dark:bg-gray-900/50">
                 <th className={thCls} onClick={() => toggleSort('name')}>
-                  Recette <SortIcon k="name" />
+                  {t('analytics.col.recipe')} <SortIcon k="name" />
                 </th>
-                <th className={`${thCls} hidden sm:table-cell`}>Catégorie</th>
+                <th className={`${thCls} hidden sm:table-cell`}>{t('analytics.col.category')}</th>
                 <th className={`${thCls} text-right`} onClick={() => toggleSort('sellingPrice')}>
-                  Prix <SortIcon k="sellingPrice" />
+                  {t('analytics.col.price')} <SortIcon k="sellingPrice" />
                 </th>
                 <th className={`${thCls} text-right`} onClick={() => toggleSort('foodCost')}>
-                  Food cost <SortIcon k="foodCost" />
+                  {t('analytics.col.foodCost')} <SortIcon k="foodCost" />
                 </th>
                 <th className={`${thCls} text-right`} onClick={() => toggleSort('margin')}>
-                  Marge <SortIcon k="margin" />
+                  {t('analytics.col.margin')} <SortIcon k="margin" />
                 </th>
-                <th className={`${thCls} hidden md:table-cell`}>Progression FC</th>
+                <th className={`${thCls} hidden md:table-cell`}>{t('analytics.col.fcProgress')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-gray-700">

@@ -39,6 +39,7 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Global overview of your menu profitability",
+    "loadError": "Unable to load dashboard.",
     "kpi": {
       "totalRecipes": "Total recipes",
       "rentableSub": "{{rentable}} profitable · {{nonRentable}} to review",
@@ -49,7 +50,32 @@
       "rentableRatio": "Profitable vs non-profitable",
       "ratioSub": "{{pct}}% of menu",
       "profit": "Potential profit / service",
-      "profitSub": "Sum of gross margins"
+      "profitSub": "Sum of gross margins",
+      "profitableRecipes": "Profitable recipes"
+    },
+    "hero": {
+      "label": "Average Food Cost",
+      "subtitle": "Your menu profitability",
+      "belowThreshold": "↓ Below the 30% threshold",
+      "aboveThreshold": "↑ Above the 30% threshold",
+      "recipes_one": "{{count}} recipe",
+      "recipes_other": "{{count}} recipes",
+      "profitable_one": "{{count}} profitable",
+      "profitable_other": "{{count}} profitable",
+      "perService": "€ / service"
+    },
+    "actions": {
+      "title": "Quick actions",
+      "scanTitle": "Scan an invoice",
+      "scanDesc": "Import and automatically analyze your supplier invoices",
+      "recipeTitle": "New recipe",
+      "recipeDesc": "Create a recipe and calculate its food cost in real time",
+      "libraryTitle": "Library",
+      "libraryDesc": "Import ingredients from the national library"
+    },
+    "chart": {
+      "start": "Start",
+      "now": "Now"
     },
     "alerts": {
       "title": "Smart alerts"
@@ -260,6 +286,55 @@
     "notes": "Notes",
     "empty": "No ingredients to display.",
     "loadError": "Unable to load order sheet."
+  },
+  "alerts": {
+    "title": "🔔 Smart alerts",
+    "subtitle_one": "{{count}} active alert",
+    "subtitle_other": "{{count}} active alerts",
+    "weeklyLabel": "Weekly AI alert",
+    "filter": {
+      "all": "All",
+      "food_cost": "Food cost",
+      "price": "Price",
+      "info": "Info"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "resolve": "Resolve",
+    "empty": {
+      "title": "No alerts",
+      "desc": "Your restaurant is on track."
+    },
+    "loadError": "Unable to load alerts."
+  },
+  "analytics": {
+    "title": "📊 Analytics",
+    "subtitle": "Detailed profitability analysis of your menu",
+    "topMargins": "Best margins",
+    "foodCostLabel": "Food cost",
+    "pieTitle": "Ingredient cost by category",
+    "pieCostLabel": "Cost",
+    "summaryTitle": "Global summary",
+    "summary": {
+      "avgFoodCost": "Average food cost",
+      "profitable": "Profitable recipes",
+      "totalProfit": "Total profit / service",
+      "nonProfitable": "Non-profitable recipes"
+    },
+    "tableTitle": "All recipes",
+    "col": {
+      "recipe": "Recipe",
+      "category": "Category",
+      "price": "Price",
+      "foodCost": "Food cost",
+      "margin": "Margin",
+      "fcProgress": "FC Progress"
+    },
+    "otherCategory": "Other",
+    "loadError": "Unable to load recipes."
   },
   "advisor": {
     "title": "AI Advisor",

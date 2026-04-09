@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -68,16 +69,12 @@ const SEVERITY_STYLE: Record<AlertSeverity, { wrapper: string; icon: string; bad
   },
 };
 
-const TYPE_LABELS: Record<AlertType, string> = {
-  all: 'Toutes',
-  food_cost: 'Food cost',
-  price: 'Prix',
-  info: 'Info',
-};
+const ALERT_TYPES: AlertType[] = ['all', 'food_cost', 'price', 'info'];
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function AlertsPage() {
+  const { t, i18n } = useTranslation();
   const [alerts, setAlerts] = useState<ParsedAlert[]>([]);
   const [weekly, setWeekly] = useState<WeeklyAlert | null>(null);
   const [filter, setFilter] = useState<AlertType>('all');
@@ -106,9 +103,9 @@ export function AlertsPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">🔔 Alertes intelligentes</h1>
+        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('alerts.title')}</h1>
         <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
-          {activeCount} alerte{activeCount !== 1 ? 's' : ''} active{activeCount !== 1 ? 's' : ''}
+          {t('alerts.subtitle', { count: activeCount })}
         </p>
       </div>
 
@@ -121,14 +118,14 @@ export function AlertsPage() {
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${SEVERITY_STYLE[weekly.severity].dot}`} />
                 <span className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400">
-                  Alerte hebdomadaire IA
+                  {t('alerts.weeklyLabel')}
                 </span>
               </div>
               <p className="mt-2 text-sm leading-relaxed text-stone-700 dark:text-gray-200">
                 {weekly.alert}
               </p>
               <p className="mt-1 text-xs text-stone-400 dark:text-gray-500">
-                {new Date(weekly.generatedAt).toLocaleString('fr-FR', {
+                {new Date(weekly.generatedAt).toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'en-GB', {
                   day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
                 })}
               </p>
@@ -139,7 +136,7 @@ export function AlertsPage() {
 
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2">
-        {(['all', 'food_cost', 'price', 'info'] as AlertType[]).map((type) => (
+        {ALERT_TYPES.map((type) => (
           <button
             key={type}
             onClick={() => setFilter(type)}
@@ -149,7 +146,7 @@ export function AlertsPage() {
                 : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
-            {TYPE_LABELS[type]}
+            {t(`alerts.filter.${type}`)}
           </button>
         ))}
       </div>
@@ -162,8 +159,8 @@ export function AlertsPage() {
       ) : visible.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-stone-300 bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-800">
           <span className="text-4xl">✅</span>
-          <p className="text-sm font-medium text-stone-700 dark:text-gray-200">Aucune alerte</p>
-          <p className="text-xs text-stone-400 dark:text-gray-500">Votre restaurant est sur la bonne voie.</p>
+          <p className="text-sm font-medium text-stone-700 dark:text-gray-200">{t('alerts.empty.title')}</p>
+          <p className="text-xs text-stone-400 dark:text-gray-500">{t('alerts.empty.desc')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -179,10 +176,10 @@ export function AlertsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.badge}`}>
-                        {alert.severity === 'critical' ? 'Critique' : alert.severity === 'warning' ? 'Attention' : 'Info'}
+                        {t(`alerts.severity.${alert.severity}`)}
                       </span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${s.badge}`}>
-                        {TYPE_LABELS[alert.type]}
+                        {t(`alerts.filter.${alert.type}`)}
                       </span>
                     </div>
                     <p className="text-sm leading-relaxed text-stone-700 dark:text-gray-200">
@@ -193,7 +190,7 @@ export function AlertsPage() {
                     onClick={() => dismiss(alert.id)}
                     className="shrink-0 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   >
-                    Résoudre
+                    {t('alerts.resolve')}
                   </button>
                 </div>
               </div>

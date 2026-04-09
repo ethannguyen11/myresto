@@ -176,7 +176,7 @@ export function DashboardPage() {
     api.get<DashboardData>('/dashboard')
       .then((res) => setData(res.data))
       .catch((err) => {
-        setError(err.response?.data?.message ?? 'Impossible de charger le tableau de bord.');
+        setError(err.response?.data?.message ?? t('dashboard.loadError'));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -202,17 +202,17 @@ export function DashboardPage() {
   const { summary, priceEvolution } = data;
   const fc = summary.averageFoodCost;
   const fcColor = fc <= 25 ? 'text-emerald-400' : fc <= 30 ? 'text-amber-400' : 'text-red-400';
-  const fcTrend = fc <= 30 ? `↓ En dessous du seuil 30 %` : `↑ Au-dessus du seuil 30 %`;
+  const fcTrend = fc <= 30 ? t('dashboard.hero.belowThreshold') : t('dashboard.hero.aboveThreshold');
 
-  // Build LineChart data: 2 points (début → maintenant) per ingredient
+  // Build LineChart data: 2 points (start → now) per ingredient
   const chartData = priceEvolution.length > 0
     ? [
         {
-          name: 'Début',
+          name: t('dashboard.chart.start'),
           ...Object.fromEntries(priceEvolution.map((p) => [p.ingredientName, p.firstPrice])),
         },
         {
-          name: 'Maintenant',
+          name: t('dashboard.chart.now'),
           ...Object.fromEntries(priceEvolution.map((p) => [p.ingredientName, p.lastPrice])),
         },
       ]
@@ -237,22 +237,22 @@ export function DashboardPage() {
         <div className="pointer-events-none absolute -bottom-16 right-8 h-64 w-64 rounded-full bg-white/5" />
 
         <div className="relative">
-          <p className="text-sm font-medium text-emerald-200">Food Cost Moyen</p>
+          <p className="text-sm font-medium text-emerald-200">{t('dashboard.hero.label')}</p>
           <p className={`mt-1 text-6xl font-black tracking-tight ${fcColor.replace('text-', 'text-')}`}
             style={{ color: 'white', opacity: 1 }}>
             {fmt(fc, 1)} %
           </p>
           <p className="mt-2 text-sm text-emerald-200">{fcTrend}</p>
-          <p className="mt-0.5 text-xs text-emerald-300">Rentabilité de votre carte</p>
+          <p className="mt-0.5 text-xs text-emerald-300">{t('dashboard.hero.subtitle')}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-              {summary.totalRecipes} recette{summary.totalRecipes !== 1 ? 's' : ''}
+              {t('dashboard.hero.recipes', { count: summary.totalRecipes })}
             </span>
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-              {summary.rentableCount} rentable{summary.rentableCount !== 1 ? 's' : ''}
+              {t('dashboard.hero.profitable', { count: summary.rentableCount })}
             </span>
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-              {fmt(summary.totalPotentialProfit)} € / service
+              {fmt(summary.totalPotentialProfit)} {t('dashboard.hero.perService')}
             </span>
           </div>
         </div>
@@ -273,7 +273,7 @@ export function DashboardPage() {
         />
         <KpiCard
           icon="✅"
-          label="Recettes rentables"
+          label={t('dashboard.kpi.profitableRecipes')}
           value={`${summary.rentableCount} / ${summary.totalRecipes}`}
           accent="text-stone-900 dark:text-white"
         />
@@ -288,25 +288,25 @@ export function DashboardPage() {
       {/* ── Quick actions ── */}
       <div>
         <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
-          Actions rapides
+          {t('dashboard.actions.title')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <QuickAction
             icon="📸"
-            title="Scanner une facture"
-            desc="Importez et analysez automatiquement vos factures fournisseurs"
+            title={t('dashboard.actions.scanTitle')}
+            desc={t('dashboard.actions.scanDesc')}
             onClick={() => navigate('/invoices')}
           />
           <QuickAction
             icon="➕"
-            title="Nouvelle recette"
-            desc="Créez une recette et calculez son food cost en temps réel"
+            title={t('dashboard.actions.recipeTitle')}
+            desc={t('dashboard.actions.recipeDesc')}
             onClick={() => navigate('/recipes')}
           />
           <QuickAction
             icon="📚"
-            title="Bibliothèque"
-            desc="Importez des ingrédients depuis la bibliothèque nationale"
+            title={t('dashboard.actions.libraryTitle')}
+            desc={t('dashboard.actions.libraryDesc')}
             onClick={() => navigate('/ingredients')}
           />
         </div>

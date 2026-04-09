@@ -39,6 +39,7 @@
   "dashboard": {
     "title": "Tableau de bord",
     "subtitle": "Vue globale de la rentabilité de votre menu",
+    "loadError": "Impossible de charger le tableau de bord.",
     "kpi": {
       "totalRecipes": "Total recettes",
       "rentableSub": "{{rentable}} rentables · {{nonRentable}} à revoir",
@@ -49,7 +50,32 @@
       "rentableRatio": "Rentables vs non rentables",
       "ratioSub": "{{pct}} % du menu",
       "profit": "Profit potentiel / service",
-      "profitSub": "Somme des marges brutes"
+      "profitSub": "Somme des marges brutes",
+      "profitableRecipes": "Recettes rentables"
+    },
+    "hero": {
+      "label": "Food Cost Moyen",
+      "subtitle": "Rentabilité de votre carte",
+      "belowThreshold": "↓ En dessous du seuil 30 %",
+      "aboveThreshold": "↑ Au-dessus du seuil 30 %",
+      "recipes_one": "{{count}} recette",
+      "recipes_other": "{{count}} recettes",
+      "profitable_one": "{{count}} rentable",
+      "profitable_other": "{{count}} rentables",
+      "perService": "€ / service"
+    },
+    "actions": {
+      "title": "Actions rapides",
+      "scanTitle": "Scanner une facture",
+      "scanDesc": "Importez et analysez automatiquement vos factures fournisseurs",
+      "recipeTitle": "Nouvelle recette",
+      "recipeDesc": "Créez une recette et calculez son food cost en temps réel",
+      "libraryTitle": "Bibliothèque",
+      "libraryDesc": "Importez des ingrédients depuis la bibliothèque nationale"
+    },
+    "chart": {
+      "start": "Début",
+      "now": "Maintenant"
     },
     "alerts": {
       "title": "Alertes intelligentes"
@@ -260,6 +286,55 @@
     "notes": "Notes",
     "empty": "Aucun ingrédient à afficher.",
     "loadError": "Impossible de charger la fiche de commande."
+  },
+  "alerts": {
+    "title": "🔔 Alertes intelligentes",
+    "subtitle_one": "{{count}} alerte active",
+    "subtitle_other": "{{count}} alertes actives",
+    "weeklyLabel": "Alerte hebdomadaire IA",
+    "filter": {
+      "all": "Toutes",
+      "food_cost": "Food cost",
+      "price": "Prix",
+      "info": "Info"
+    },
+    "severity": {
+      "critical": "Critique",
+      "warning": "Attention",
+      "info": "Info"
+    },
+    "resolve": "Résoudre",
+    "empty": {
+      "title": "Aucune alerte",
+      "desc": "Votre restaurant est sur la bonne voie."
+    },
+    "loadError": "Impossible de charger les alertes."
+  },
+  "analytics": {
+    "title": "📊 Analytiques",
+    "subtitle": "Analyse détaillée de la rentabilité de votre carte",
+    "topMargins": "Meilleures marges",
+    "foodCostLabel": "Food cost",
+    "pieTitle": "Coût ingrédients par catégorie",
+    "pieCostLabel": "Coût",
+    "summaryTitle": "Résumé global",
+    "summary": {
+      "avgFoodCost": "Food cost moyen",
+      "profitable": "Recettes rentables",
+      "totalProfit": "Profit total / service",
+      "nonProfitable": "Recettes non rentables"
+    },
+    "tableTitle": "Toutes les recettes",
+    "col": {
+      "recipe": "Recette",
+      "category": "Catégorie",
+      "price": "Prix",
+      "foodCost": "Food cost",
+      "margin": "Marge",
+      "fcProgress": "Progression FC"
+    },
+    "otherCategory": "Autre",
+    "loadError": "Impossible de charger les recettes."
   },
   "advisor": {
     "title": "Conseiller IA",
