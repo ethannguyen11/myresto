@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: chefai-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    # Context is apps/api/ — only the API source is sent to Docker,
+    # keeping the build context small (excludes web, mobile, root)
+    dockerContext: ./apps/api
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Set these manually in the Render dashboard — never commit secrets
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Note: the codebase reads ANTHROPIC_API_KEY (not CLAUDE_API_KEY)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
