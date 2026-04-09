@@ -138,7 +138,29 @@
     "delete": {
       "message": "Delete {{name}}? This action is irreversible and will delete the associated price history."
     },
-    "loadError": "Unable to load ingredients."
+    "loadError": "Unable to load ingredients.",
+    "filters": {
+      "searchPlaceholder": "Search an ingredient…",
+      "allCategories": "All categories",
+      "sort": {
+        "name": "Name",
+        "price": "Price",
+        "date": "Updated"
+      },
+      "displayed_one": "{{count}} ingredient shown",
+      "displayed_other": "{{count}} ingredients shown",
+      "noResults": "No results for these filters.",
+      "categories": {
+        "viande": "Meat",
+        "poisson": "Fish",
+        "légume": "Vegetable",
+        "laitier": "Dairy",
+        "épicerie": "Grocery",
+        "condiment": "Condiment",
+        "fruit": "Fruit",
+        "autre": "Other"
+      }
+    }
   },
   "recipes": {
     "title": "Recipes",
@@ -254,7 +276,20 @@
     "delete": {
       "message": "Delete invoice {{name}} and all its lines? This action is irreversible."
     },
-    "loadError": "Unable to load invoices."
+    "loadError": "Unable to load invoices.",
+    "filters": {
+      "searchPlaceholder": "Search a supplier…",
+      "allStatuses": "All statuses",
+      "period7": "7 days",
+      "period30": "30 days",
+      "period90": "3 months",
+      "periodAll": "All",
+      "sortNewest": "Newest",
+      "sortOldest": "Oldest",
+      "displayed_one": "{{count}} invoice shown",
+      "displayed_other": "{{count}} invoices shown",
+      "noResults": "No invoices for these filters."
+    }
   },
   "library": {
     "button": "Library",

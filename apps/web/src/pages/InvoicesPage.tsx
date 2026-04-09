@@ -438,6 +438,12 @@ function ValidationModal({
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
+type InvSortDir = 'asc' | 'desc';
+type InvPeriod  = 0 | 7 | 30 | 90;
+type InvStatusFilter = InvoiceStatus | 'all';
+const INV_STATUSES: InvStatusFilter[] = ['all', 'pending', 'analyzing', 'reviewed', 'validated', 'error'];
+const INV_PERIODS: InvPeriod[] = [0, 7, 30, 90];
+
 type ActiveModal =
   | { type: 'validate'; invoice: Invoice }
   | { type: 'delete'; invoice: Invoice };
@@ -450,6 +456,12 @@ export function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Filter & sort state ──
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<InvStatusFilter>('all');
+  const [period, setPeriod] = useState<InvPeriod>(0);
+  const [sortDir, setSortDir] = useState<InvSortDir>('desc');
 
   const load = useCallback(async (silent = false) => {
     try {
@@ -525,6 +537,27 @@ export function InvoicesPage() {
   const validated = invoices.filter((i) => i.status === 'validated').length;
   const toReview  = invoices.filter((i) => i.status === 'reviewed').length;
 
+  // ── Filtered + sorted invoices ──
+  const now = Date.now();
+  let filtered = invoices;
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    filtered = filtered.filter((inv) => (inv.supplierName ?? '').toLowerCase().includes(q));
+  }
+  if (statusFilter !== 'all') {
+    filtered = filtered.filter((inv) => inv.status === statusFilter);
+  }
+  if (period > 0) {
+    const cutoff = now - period * 24 * 60 * 60 * 1000;
+    filtered = filtered.filter((inv) => new Date(inv.createdAt).getTime() >= cutoff);
+  }
+  filtered = [...filtered].sort((a, b) => {
+    const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    return sortDir === 'desc' ? -diff : diff;
+  });
+
+  const selectCls = 'rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white';
+
   return (
     <>
       <div className="space-y-6">
@@ -561,20 +594,74 @@ export function InvoicesPage() {
 
         {/* Invoice list */}
         {invoices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-800">
             <span className="text-4xl">📂</span>
-            <p className="mt-3 text-sm font-medium text-stone-700">{t('invoices.empty.title')}</p>
-            <p className="mt-1 text-xs text-stone-400">{t('invoices.empty.desc')}</p>
+            <p className="mt-3 text-sm font-medium text-stone-700 dark:text-gray-200">{t('invoices.empty.title')}</p>
+            <p className="mt-1 text-xs text-stone-400 dark:text-gray-500">{t('invoices.empty.desc')}</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-            <div className="border-b border-stone-100 px-5 py-4">
-              <h2 className="text-sm font-semibold text-stone-700">{t('invoices.history')}</h2>
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {/* ── Filter bar ── */}
+            <div className="border-b border-stone-100 p-4 dark:border-gray-700 space-y-3">
+              <div className="flex flex-wrap gap-3">
+                {/* Search */}
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t('invoices.filters.searchPlaceholder')}
+                  className={`flex-1 min-w-[180px] ${selectCls}`}
+                />
+                {/* Status */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as InvStatusFilter)}
+                  className={selectCls}
+                >
+                  <option value="all">{t('invoices.filters.allStatuses')}</option>
+                  {INV_STATUSES.filter((s) => s !== 'all').map((s) => (
+                    <option key={s} value={s}>{t(`invoices.status.${s}`)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Period buttons */}
+                {INV_PERIODS.map((p) => {
+                  const label = p === 0 ? t('invoices.filters.periodAll')
+                    : p === 7 ? t('invoices.filters.period7')
+                    : p === 30 ? t('invoices.filters.period30')
+                    : t('invoices.filters.period90');
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPeriod(p)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                        period === p
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                {/* Sort toggle */}
+                <button
+                  onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
+                  className="rounded-full px-3 py-1 text-xs font-medium bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {sortDir === 'desc' ? t('invoices.filters.sortNewest') : t('invoices.filters.sortOldest')} {sortDir === 'desc' ? '↓' : '↑'}
+                </button>
+                <span className="ml-auto text-xs text-stone-400 dark:text-gray-500">
+                  {t('invoices.filters.displayed', { count: filtered.length })}
+                </span>
+              </div>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
+                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-500">
                     <th className="px-5 py-3">{t('invoices.table.supplier')}</th>
                     <th className="px-5 py-3">{t('invoices.table.invoiceDate')}</th>
                     <th className="px-5 py-3">{t('invoices.table.importedOn')}</th>
@@ -584,8 +671,15 @@ export function InvoicesPage() {
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {invoices.map((inv) => (
+                <tbody className="divide-y divide-stone-100 dark:divide-gray-700">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-sm text-stone-400 dark:text-gray-500">
+                        <span className="block text-2xl mb-2">🔍</span>
+                        {t('invoices.filters.noResults')}
+                      </td>
+                    </tr>
+                  ) : filtered.map((inv) => (
                     <tr key={inv.id} className="group hover:bg-stone-50">
                       {/* Supplier */}
                       <td className="px-5 py-3">

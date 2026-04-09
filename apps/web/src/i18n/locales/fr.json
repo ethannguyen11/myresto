@@ -138,7 +138,29 @@
     "delete": {
       "message": "Supprimer {{name}} ? Cette action est irréversible et supprimera l'historique des prix associé."
     },
-    "loadError": "Impossible de charger les ingrédients."
+    "loadError": "Impossible de charger les ingrédients.",
+    "filters": {
+      "searchPlaceholder": "Rechercher un ingrédient…",
+      "allCategories": "Toutes catégories",
+      "sort": {
+        "name": "Nom",
+        "price": "Prix",
+        "date": "Date MAJ"
+      },
+      "displayed_one": "{{count}} ingrédient affiché",
+      "displayed_other": "{{count}} ingrédients affichés",
+      "noResults": "Aucun résultat pour ces filtres.",
+      "categories": {
+        "viande": "Viande",
+        "poisson": "Poisson",
+        "légume": "Légume",
+        "laitier": "Produit laitier",
+        "épicerie": "Épicerie",
+        "condiment": "Condiment",
+        "fruit": "Fruit",
+        "autre": "Autre"
+      }
+    }
   },
   "recipes": {
     "title": "Recettes",
@@ -254,7 +276,20 @@
     "delete": {
       "message": "Supprimer la facture {{name}} et toutes ses lignes ? Cette action est irréversible."
     },
-    "loadError": "Impossible de charger les factures."
+    "loadError": "Impossible de charger les factures.",
+    "filters": {
+      "searchPlaceholder": "Rechercher un fournisseur…",
+      "allStatuses": "Tous les statuts",
+      "period7": "7 jours",
+      "period30": "30 jours",
+      "period90": "3 mois",
+      "periodAll": "Tout",
+      "sortNewest": "Plus récent",
+      "sortOldest": "Plus ancien",
+      "displayed_one": "{{count}} facture affichée",
+      "displayed_other": "{{count}} factures affichées",
+      "noResults": "Aucune facture pour ces filtres."
+    }
   },
   "library": {
     "button": "Bibliothèque",

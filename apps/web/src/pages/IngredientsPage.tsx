@@ -375,6 +375,15 @@ function DeleteModal({
   );
 }
 
+// ── Filter / sort types ────────────────────────────────────────────────────
+
+type IngSortKey = 'name' | 'price' | 'updatedAt';
+type SortDir    = 'asc' | 'desc';
+
+const ING_CATEGORIES = ['all', 'viande', 'poisson', 'légume', 'laitier', 'épicerie', 'condiment', 'fruit', 'autre'] as const;
+type IngCategory = typeof ING_CATEGORIES[number];
+const KNOWN_CATS = ['viande', 'poisson', 'légume', 'laitier', 'épicerie', 'condiment', 'fruit', 'boisson'];
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 type ActiveModal =
@@ -391,6 +400,17 @@ export function IngredientsPage() {
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const [showOrderSheet, setShowOrderSheet] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+
+  // ── Filter & sort state ──
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState<IngCategory>('all');
+  const [sortKey, setSortKey] = useState<IngSortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  function toggleSort(key: IngSortKey) {
+    if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir(key === 'name' ? 'asc' : 'desc'); }
+  }
 
   async function load() {
     try {
@@ -450,6 +470,32 @@ export function IngredientsPage() {
     );
   }
 
+  // ── Filtered + sorted list ──
+  let displayed = ingredients;
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    displayed = displayed.filter((i) => i.name.toLowerCase().includes(q));
+  }
+  if (catFilter !== 'all') {
+    displayed = displayed.filter((i) => {
+      if (catFilter === 'autre') {
+        if (!i.category) return true;
+        const cat = i.category.toLowerCase();
+        return !KNOWN_CATS.some((k) => cat.includes(k));
+      }
+      return i.category?.toLowerCase().includes(catFilter) ?? false;
+    });
+  }
+  displayed = [...displayed].sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'name') cmp = a.name.localeCompare(b.name, 'fr');
+    else if (sortKey === 'price') cmp = Number(a.currentPrice) - Number(b.currentPrice);
+    else cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const inputCls = 'rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white';
+
   return (
     <>
       <div className="space-y-6">
@@ -457,21 +503,21 @@ export function IngredientsPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">{t('ingredients.title')}</h1>
-            <p className="mt-0.5 text-sm text-stone-500">
+            <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('ingredients.title')}</h1>
+            <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
               {t('ingredients.subtitle', { count: ingredients.length })}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setShowLibrary(true)}
-              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               📚 {t('library.button')}
             </button>
             <button
               onClick={() => setShowOrderSheet(true)}
-              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               🖨️ {t('orderSheet.button')}
             </button>
@@ -485,12 +531,71 @@ export function IngredientsPage() {
           </div>
         </div>
 
-        {/* Empty state */}
+        {/* ── Filter bar ── */}
+        {ingredients.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {/* Row 1: search + category */}
+            <div className="flex flex-wrap gap-3">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('ingredients.filters.searchPlaceholder')}
+                className={`flex-1 min-w-[180px] ${inputCls}`}
+              />
+              <select
+                value={catFilter}
+                onChange={(e) => setCatFilter(e.target.value as IngCategory)}
+                className={inputCls}
+              >
+                <option value="all">{t('ingredients.filters.allCategories')}</option>
+                {ING_CATEGORIES.filter((c) => c !== 'all').map((cat) => (
+                  <option key={cat} value={cat}>
+                    {t(`ingredients.filters.categories.${cat}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Row 2: sort buttons + counter */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-stone-400 dark:text-gray-500 mr-1">
+                {t('ingredients.filters.sort.name')}
+              </span>
+              {(['name', 'price', 'updatedAt'] as IngSortKey[]).map((key) => {
+                const labels: Record<IngSortKey, string> = {
+                  name: t('ingredients.filters.sort.name'),
+                  price: t('ingredients.filters.sort.price'),
+                  updatedAt: t('ingredients.filters.sort.date'),
+                };
+                const active = sortKey === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleSort(key)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {labels[key]} {active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                  </button>
+                );
+              })}
+              <span className="ml-auto text-xs text-stone-400 dark:text-gray-500">
+                {t('ingredients.filters.displayed', { count: displayed.length })}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state — no ingredients at all */}
         {ingredients.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-800">
             <span className="text-4xl">🥕</span>
-            <p className="mt-3 text-sm font-medium text-stone-700">{t('ingredients.empty.title')}</p>
-            <p className="mt-1 text-xs text-stone-400">{t('ingredients.empty.desc')}</p>
+            <p className="mt-3 text-sm font-medium text-stone-700 dark:text-gray-200">{t('ingredients.empty.title')}</p>
+            <p className="mt-1 text-xs text-stone-400 dark:text-gray-500">{t('ingredients.empty.desc')}</p>
             <button
               onClick={() => setModal({ type: 'create' })}
               className="mt-4 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
@@ -498,12 +603,18 @@ export function IngredientsPage() {
               {t('ingredients.add')}
             </button>
           </div>
+        ) : displayed.length === 0 ? (
+          /* No results for active filters */
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-800">
+            <span className="text-3xl">🔍</span>
+            <p className="text-sm text-stone-500 dark:text-gray-400">{t('ingredients.filters.noResults')}</p>
+          </div>
         ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400">
+                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-500">
                     <th className="px-5 py-3">{t('ingredients.table.name')}</th>
                     <th className="px-5 py-3">{t('ingredients.table.category')}</th>
                     <th className="px-5 py-3">{t('ingredients.table.unit')}</th>
@@ -512,14 +623,14 @@ export function IngredientsPage() {
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {ingredients.map((ing) => (
-                    <tr key={ing.id} className="group hover:bg-stone-50">
+                <tbody className="divide-y divide-stone-100 dark:divide-gray-700">
+                  {displayed.map((ing) => (
+                    <tr key={ing.id} className="group hover:bg-stone-50 dark:hover:bg-gray-700/40">
                       {/* Name — cliquable pour l'historique */}
                       <td className="px-5 py-3">
                         <button
                           onClick={() => setModal({ type: 'history', ingredient: ing })}
-                          className="font-medium text-stone-800 underline-offset-2 hover:text-emerald-600 hover:underline"
+                          className="font-medium text-stone-800 underline-offset-2 hover:text-emerald-600 hover:underline dark:text-gray-100"
                         >
                           {ing.name}
                         </button>
@@ -538,13 +649,13 @@ export function IngredientsPage() {
                         )}
                       </td>
 
-                      <td className="px-5 py-3 text-stone-500">{ing.unit}</td>
+                      <td className="px-5 py-3 text-stone-500 dark:text-gray-400">{ing.unit}</td>
 
-                      <td className="px-5 py-3 text-right font-semibold text-stone-800">
+                      <td className="px-5 py-3 text-right font-semibold text-stone-800 dark:text-gray-100">
                         {fmt(Number(ing.currentPrice))} €
                       </td>
 
-                      <td className="px-5 py-3 text-right text-xs text-stone-400">
+                      <td className="px-5 py-3 text-right text-xs text-stone-400 dark:text-gray-500">
                         {fmtDate(ing.updatedAt)}
                       </td>
 
@@ -560,7 +671,7 @@ export function IngredientsPage() {
                           </button>
                           <button
                             onClick={() => setModal({ type: 'edit', ingredient: ing })}
-                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:text-gray-300 dark:hover:bg-gray-700"
                           >
                             {t('common.edit')}
                           </button>
