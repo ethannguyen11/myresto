@@ -24,7 +24,11 @@ interface WeeklyAlert {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function parseAlert(raw: string, id: number): ParsedAlert {
-  const message = raw.replace(/^[\u{1F000}-\u{FFFF}\u{10000}-\u{10FFFF}\s⚠️📈💡ℹ️🚨]+/u, '').trim();
+  // Strip leading emoji/symbols by advancing past non-letter characters
+  let start = 0;
+  const chars = [...raw];
+  while (start < chars.length && !/\p{L}/u.test(chars[start])) start++;
+  const message = chars.slice(start).join('').trim();
 
   let type: AlertType = 'info';
   let severity: AlertSeverity = 'info';
