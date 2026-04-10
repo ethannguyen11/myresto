@@ -14,7 +14,7 @@ async function bootstrap() {
       'http://localhost:8083',
       'http://localhost:19006',
       'http://192.168.0.6:8083',
-      'https://api-production-70f6.up.railway.app',
+      'https://chef-ai-tssy.onrender.com',
       'https://chefai-web.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],

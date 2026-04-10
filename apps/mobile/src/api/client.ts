@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 
 const BASE_URL = __DEV__
   ? 'http://192.168.0.6:3000'
-  : 'https://chefai-api.onrender.com';
+  : 'https://chef-ai-tssy.onrender.com';
 
 async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem('access_token');
