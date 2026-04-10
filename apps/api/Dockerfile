@@ -1,42 +1,57 @@
 # Build context: monorepo root (dockerContext: .)
 
-FROM node:20-alpine
+# ── Stage 1 — Builder ──────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
 
-# bcrypt uses a native C++ addon — build tools required on Alpine
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# ── Workspace manifests ────────────────────────────────────────────────────
-# npm needs ALL workspace package.json files to resolve the workspace graph
-# (root package.json declares "workspaces": ["apps/*", "packages/*"])
 COPY package*.json ./
-COPY apps/api/package.json     ./apps/api/
-COPY apps/web/package.json     ./apps/web/
-COPY apps/mobile/package.json  ./apps/mobile/
+COPY apps/api/package.json  ./apps/api/
+COPY apps/web/package.json  ./apps/web/
+COPY apps/mobile/package.json ./apps/mobile/
 
-# Install only apps/api dependencies (hoisted to /app/node_modules)
-RUN npm install --workspace=apps/api
+ENV NODE_OPTIONS="--max-old-space-size=400"
 
-# ── API source files ───────────────────────────────────────────────────────
-COPY apps/api/src              ./apps/api/src
+RUN npm install --workspace=apps/api --legacy-peer-deps
+
 COPY apps/api/prisma           ./apps/api/prisma
+COPY apps/api/src              ./apps/api/src
 COPY apps/api/tsconfig*.json   ./apps/api/
 COPY apps/api/nest-cli.json    ./apps/api/
 COPY apps/api/prisma.config.ts ./apps/api/
 
-# ── Build ──────────────────────────────────────────────────────────────────
-WORKDIR /app/apps/api
-
-# prisma.config.ts calls env("DATABASE_URL") when loaded by the CLI.
-# prisma generate does NOT open a DB connection — placeholder is safe.
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ARG DATABASE_URL=postgresql://placeholder:placeholder@localhost/placeholder
 ENV DATABASE_URL=$DATABASE_URL
 
-# "prisma generate && nest build" — compiles src/ → dist/
+WORKDIR /app/apps/api
+
+RUN npx prisma generate
 RUN npm run build
 
-EXPOSE 3000
+# ── Stage 2 — Production ───────────────────────────────────────────────────
+FROM node:20-alpine AS production
 
-# nest-cli.json sourceRoot="src" → entry point is dist/main.js (not dist/src/main)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY apps/api/package.json    ./apps/api/
+COPY apps/web/package.json    ./apps/web/
+COPY apps/mobile/package.json ./apps/mobile/
+
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
+RUN npm install --workspace=apps/api --legacy-peer-deps --omit=dev
+
+COPY --from=builder /app/apps/api/dist  ./apps/api/dist
+COPY --from=builder /app/node_modules/.prisma  ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma  ./node_modules/@prisma
+COPY apps/api/prisma ./apps/api/prisma
+
+WORKDIR /app/apps/api
+
+EXPOSE 3000
 CMD ["node", "dist/main"]
