@@ -7,26 +7,51 @@ import { UpdateRecipeDto } from './dto/update-recipe.dto'
 export class RecipesService {
   constructor(private prisma: PrismaService) {}
 
-  // Calcule le food cost d'une recette
-  private calculateFoodCost(items: any[], sellingPrice: any) {
-    // Coût total des ingrédients
-    const totalCost = items.reduce((sum, item) => {
-      const ingredientPrice = Number(item.ingredient.currentPrice)
-      const quantity = Number(item.quantity)
-      return sum + ingredientPrice * quantity
+  private round(n: number): number {
+    return Math.round(n * 100) / 100
+  }
+
+  private calculateFoodCost(items: any[], sellingPrice: any, recipe?: any) {
+    // Coût ingrédients brut
+    const ingredientCost = items.reduce((sum, item) => {
+      return sum + Number(item.ingredient.currentPrice) * Number(item.quantity)
     }, 0)
 
+    // Coût avec pertes matière
+    const wastage = Number(recipe?.wastagePercent ?? 0) / 100
+    const ingredientCostWithWaste = ingredientCost * (1 + wastage)
+
+    // Coût énergie
+    const energyCost = Number(recipe?.energyCost ?? 0)
+
+    // Coût total réel
+    const totalRealCost = ingredientCostWithWaste + energyCost
+
     const selling = Number(sellingPrice)
-    const foodCostPercent = selling > 0 ? (totalCost / selling) * 100 : 0
-    const profitPerDish = selling - totalCost
-    const isRentable = foodCostPercent <= 30 // seuil standard restauration
+
+    // Food cost % (ingrédients seulement — métrique classique)
+    const foodCostPercent = selling > 0 ? (ingredientCost / selling) * 100 : 0
+
+    // Coût réel % (tous les coûts)
+    const realCostPercent = selling > 0 ? (totalRealCost / selling) * 100 : 0
+
+    // RAG Status basé sur le coût réel
+    const ragStatus: 'green' | 'amber' | 'red' =
+      realCostPercent <= 30 ? 'green' : realCostPercent <= 40 ? 'amber' : 'red'
 
     return {
-      totalCost: Math.round(totalCost * 100) / 100,
+      totalCost: this.round(ingredientCost),                    // compat
+      ingredientCost: this.round(ingredientCost),
+      ingredientCostWithWaste: this.round(ingredientCostWithWaste),
+      energyCost: this.round(energyCost),
+      totalRealCost: this.round(totalRealCost),
       sellingPrice: selling,
-      foodCostPercent: Math.round(foodCostPercent * 100) / 100,
-      profitPerDish: Math.round(profitPerDish * 100) / 100,
-      isRentable,
+      foodCostPercent: this.round(foodCostPercent),
+      realCostPercent: this.round(realCostPercent),
+      profitPerDish: this.round(selling - ingredientCost),      // compat
+      realProfitPerDish: this.round(selling - totalRealCost),
+      isRentable: foodCostPercent <= 30,
+      ragStatus,
       status: foodCostPercent <= 25
         ? '🟢 Excellent'
         : foodCostPercent <= 30
@@ -37,43 +62,36 @@ export class RecipesService {
     }
   }
 
-  // Récupère toutes les recettes avec leur food cost calculé
   async findAll(userId: number) {
     const recipes = await this.prisma.recipe.findMany({
       where: { userId },
       orderBy: { name: 'asc' },
       include: {
-        items: {
-          include: { ingredient: true },
-        },
+        items: { include: { ingredient: true } },
       },
     })
 
     return recipes.map(recipe => ({
       ...recipe,
-      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice),
+      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice, recipe),
     }))
   }
 
-  // Récupère une recette par ID
   async findOne(id: number, userId: number) {
     const recipe = await this.prisma.recipe.findFirst({
       where: { id, userId },
       include: {
-        items: {
-          include: { ingredient: true },
-        },
+        items: { include: { ingredient: true } },
       },
     })
     if (!recipe) throw new NotFoundException('Recette introuvable')
 
     return {
       ...recipe,
-      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice),
+      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice, recipe),
     }
   }
 
-  // Crée une recette avec ses ingrédients
   async create(userId: number, dto: CreateRecipeDto) {
     const recipe = await this.prisma.recipe.create({
       data: {
@@ -83,6 +101,10 @@ export class RecipesService {
         sellingPrice: dto.sellingPrice,
         vatRate: dto.vatRate ?? 0.10,
         notes: dto.notes,
+        prepTimeMinutes: dto.prepTimeMinutes,
+        servings: dto.servings ?? 1,
+        wastagePercent: dto.wastagePercent ?? 0,
+        energyCost: dto.energyCost ?? 0,
         items: {
           create: dto.items.map(item => ({
             ingredientId: item.ingredientId,
@@ -92,23 +114,19 @@ export class RecipesService {
         },
       },
       include: {
-        items: {
-          include: { ingredient: true },
-        },
+        items: { include: { ingredient: true } },
       },
     })
 
     return {
       ...recipe,
-      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice),
+      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice, recipe),
     }
   }
 
-  // Met à jour une recette
   async update(id: number, userId: number, dto: UpdateRecipeDto) {
     await this.findOne(id, userId)
 
-    // Si les items sont mis à jour, on supprime les anciens et recrée
     if (dto.items) {
       await this.prisma.recipeItem.deleteMany({ where: { recipeId: id } })
     }
@@ -121,6 +139,10 @@ export class RecipesService {
         sellingPrice: dto.sellingPrice,
         vatRate: dto.vatRate,
         notes: dto.notes,
+        prepTimeMinutes: dto.prepTimeMinutes,
+        ...(dto.servings !== undefined && { servings: dto.servings }),
+        ...(dto.wastagePercent !== undefined && { wastagePercent: dto.wastagePercent }),
+        ...(dto.energyCost !== undefined && { energyCost: dto.energyCost }),
         ...(dto.items && {
           items: {
             create: dto.items.map(item => ({
@@ -132,26 +154,22 @@ export class RecipesService {
         }),
       },
       include: {
-        items: {
-          include: { ingredient: true },
-        },
+        items: { include: { ingredient: true } },
       },
     })
 
     return {
       ...recipe,
-      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice),
+      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice, recipe),
     }
   }
 
-  // Supprime une recette
   async remove(id: number, userId: number) {
     await this.findOne(id, userId)
     await this.prisma.recipeItem.deleteMany({ where: { recipeId: id } })
     return this.prisma.recipe.delete({ where: { id } })
   }
 
-  // Analyse de rentabilité globale de la carte
   async getMenuAnalysis(userId: number) {
     const recipes = await this.findAll(userId)
 
@@ -159,30 +177,36 @@ export class RecipesService {
       totalRecipes: recipes.length,
       rentableCount: recipes.filter(r => r.foodCost.isRentable).length,
       nonRentableCount: recipes.filter(r => !r.foodCost.isRentable).length,
+      ragGreen: recipes.filter(r => r.foodCost.ragStatus === 'green').length,
+      ragAmber: recipes.filter(r => r.foodCost.ragStatus === 'amber').length,
+      ragRed: recipes.filter(r => r.foodCost.ragStatus === 'red').length,
       averageFoodCost: 0,
+      averageRealCost: 0,
       bestDish: null as any,
       worstDish: null as any,
       alerts: [] as string[],
     }
 
     if (recipes.length > 0) {
-      analysis.averageFoodCost = Math.round(
-        recipes.reduce((sum, r) => sum + r.foodCost.foodCostPercent, 0) / recipes.length * 100
-      ) / 100
+      analysis.averageFoodCost = this.round(
+        recipes.reduce((sum, r) => sum + r.foodCost.foodCostPercent, 0) / recipes.length
+      )
+      analysis.averageRealCost = this.round(
+        recipes.reduce((sum, r) => sum + r.foodCost.realCostPercent, 0) / recipes.length
+      )
 
       analysis.bestDish = recipes.reduce((best, r) =>
-        r.foodCost.profitPerDish > (best?.foodCost.profitPerDish ?? -Infinity) ? r : best
+        r.foodCost.realProfitPerDish > (best?.foodCost.realProfitPerDish ?? -Infinity) ? r : best
       )
 
       analysis.worstDish = recipes.reduce((worst, r) =>
-        r.foodCost.foodCostPercent > (worst?.foodCost.foodCostPercent ?? -Infinity) ? r : worst
+        r.foodCost.realCostPercent > (worst?.foodCost.realCostPercent ?? -Infinity) ? r : worst
       )
 
-      // Génère des alertes
       recipes.forEach(recipe => {
-        if (recipe.foodCost.foodCostPercent > 35) {
+        if (recipe.foodCost.ragStatus === 'red') {
           analysis.alerts.push(
-            `⚠️ "${recipe.name}" a un food cost de ${recipe.foodCost.foodCostPercent}% — non rentable`
+            `⚠️ "${recipe.name}" — coût réel ${recipe.foodCost.realCostPercent}% (food cost ${recipe.foodCost.foodCostPercent}%)`
           )
         }
       })

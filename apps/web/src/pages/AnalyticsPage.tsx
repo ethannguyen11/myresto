@@ -9,10 +9,15 @@ import { api } from '../api/client';
 
 interface FoodCost {
   totalCost: number;
+  ingredientCost: number;
+  totalRealCost: number;
   sellingPrice: number;
   foodCostPercent: number;
+  realCostPercent: number;
   profitPerDish: number;
+  realProfitPerDish: number;
   isRentable: boolean;
+  ragStatus: 'green' | 'amber' | 'red';
   status: string;
 }
 
@@ -107,11 +112,17 @@ export function AnalyticsPage() {
     .sort((a, b) => b.foodCost.profitPerDish - a.foodCost.profitPerDish)
     .slice(0, 3);
 
+  // RAG counts
+  const ragGreen = recipes.filter((r) => r.foodCost.ragStatus === 'green').length;
+  const ragAmber = recipes.filter((r) => r.foodCost.ragStatus === 'amber').length;
+  const ragRed = recipes.filter((r) => r.foodCost.ragStatus === 'red').length;
+  const redRecipes = recipes.filter((r) => r.foodCost.ragStatus === 'red');
+
   // Pie: cost per category
   const catMap: Record<string, number> = {};
   for (const r of recipes) {
     const cat = r.category ?? t('analytics.otherCategory');
-    catMap[cat] = (catMap[cat] ?? 0) + r.foodCost.totalCost;
+    catMap[cat] = (catMap[cat] ?? 0) + (r.foodCost.ingredientCost ?? r.foodCost.totalCost);
   }
   const pieData = Object.entries(catMap).map(([name, value]) => ({
     name,
@@ -180,6 +191,55 @@ export function AnalyticsPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Analyse RAG ── */}
+      {recipes.length > 0 && (
+        <div>
+          <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
+            {t('analytics.rag.title')}
+          </h2>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {[
+              { label: t('analytics.rag.green'), count: ragGreen, cls: 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20', textCls: 'text-emerald-700 dark:text-emerald-300' },
+              { label: t('analytics.rag.amber'), count: ragAmber, cls: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20', textCls: 'text-amber-700 dark:text-amber-300' },
+              { label: t('analytics.rag.red'), count: ragRed, cls: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20', textCls: 'text-red-700 dark:text-red-300' },
+            ].map(({ label, count, cls, textCls }) => (
+              <div key={label} className={`rounded-2xl border p-5 shadow-sm ${cls}`}>
+                <p className={`text-3xl font-bold ${textCls}`}>{count}</p>
+                <p className={`mt-1 text-sm font-medium ${textCls}`}>{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {redRecipes.length > 0 && (
+            <div className="rounded-2xl border border-red-200 bg-white shadow-sm dark:border-red-800 dark:bg-gray-800">
+              <div className="border-b border-red-100 px-5 py-3 dark:border-red-800">
+                <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">{t('analytics.rag.redTitle')}</h3>
+              </div>
+              <div className="divide-y divide-stone-100 dark:divide-gray-700">
+                {redRecipes.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between px-5 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-stone-800 dark:text-white">{r.name}</p>
+                      <p className="text-xs text-stone-400 dark:text-gray-500">{t('analytics.rag.suggestion')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                        {fmt(r.foodCost.realCostPercent, 1)} % réel
+                      </p>
+                      <p className="text-xs text-stone-400">FC {fmt(r.foodCost.foodCostPercent, 1)} %</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {redRecipes.length === 0 && (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400">{t('analytics.rag.noRed')}</p>
+          )}
         </div>
       )}
 

@@ -20,10 +20,17 @@ interface RecipeItem {
 
 interface FoodCost {
   totalCost: number;
+  ingredientCost: number;
+  ingredientCostWithWaste: number;
+  energyCost: number;
+  totalRealCost: number;
   sellingPrice: number;
   foodCostPercent: number;
+  realCostPercent: number;
   profitPerDish: number;
+  realProfitPerDish: number;
   isRentable: boolean;
+  ragStatus: 'green' | 'amber' | 'red';
   status: string;
 }
 
@@ -33,6 +40,10 @@ interface Recipe {
   category: string | null;
   sellingPrice: number;
   notes: string | null;
+  prepTimeMinutes: number | null;
+  servings: number | null;
+  wastagePercent: number | null;
+  energyCost: number | null;
   items: RecipeItem[];
   foodCost: FoodCost;
 }
@@ -47,6 +58,10 @@ interface RecipeForm {
   name: string;
   category: string;
   sellingPrice: string;
+  prepTimeMinutes: string;
+  servings: string;
+  wastagePercent: string;
+  energyCost: string;
   notes: string;
   items: ItemRow[];
 }
@@ -55,6 +70,10 @@ const EMPTY_FORM: RecipeForm = {
   name: '',
   category: '',
   sellingPrice: '',
+  prepTimeMinutes: '',
+  servings: '1',
+  wastagePercent: '0',
+  energyCost: '0',
   notes: '',
   items: [{ ingredientId: '', quantity: '' }],
 };
@@ -79,28 +98,49 @@ function foodCostTextCls(pct: number): string {
   return 'text-red-500';
 }
 
-/** Recalculate food cost locally using ingredient prices — mirrors server logic */
+function ragDot(status: 'green' | 'amber' | 'red'): string {
+  if (status === 'green') return '🟢';
+  if (status === 'amber') return '🟡';
+  return '🔴';
+}
+
+function ragBadgeCls(status: 'green' | 'amber' | 'red'): string {
+  if (status === 'green') return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
+  if (status === 'amber') return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
+  return 'bg-red-50 text-red-700 ring-1 ring-red-200';
+}
+
+/** Recalculate food cost locally — mirrors server logic */
 function calcFoodCost(
   items: ItemRow[],
   sellingPriceStr: string,
   ingredientMap: Map<number, Ingredient>,
-): { totalCost: number; foodCostPct: number; profit: number } | null {
+  wastageStr: string,
+  energyCostStr: string,
+): { ingredientCost: number; totalRealCost: number; foodCostPct: number; realCostPct: number; profit: number; realProfit: number } | null {
   const selling = parseFloat(sellingPriceStr);
   if (!selling || selling <= 0) return null;
 
-  let totalCost = 0;
+  let ingredientCost = 0;
   for (const row of items) {
     const ing = ingredientMap.get(parseInt(row.ingredientId));
     const qty = parseFloat(row.quantity);
     if (!ing || !qty || qty <= 0) continue;
-    totalCost += Number(ing.currentPrice) * qty;
+    ingredientCost += Number(ing.currentPrice) * qty;
   }
 
-  const pct = (totalCost / selling) * 100;
+  const wastage = (parseFloat(wastageStr) || 0) / 100;
+  const ingredientCostWithWaste = ingredientCost * (1 + wastage);
+  const energyCost = parseFloat(energyCostStr) || 0;
+  const totalRealCost = ingredientCostWithWaste + energyCost;
+
   return {
-    totalCost: Math.round(totalCost * 100) / 100,
-    foodCostPct: Math.round(pct * 100) / 100,
-    profit: Math.round((selling - totalCost) * 100) / 100,
+    ingredientCost: Math.round(ingredientCost * 100) / 100,
+    totalRealCost: Math.round(totalRealCost * 100) / 100,
+    foodCostPct: Math.round((ingredientCost / selling) * 10000) / 100,
+    realCostPct: Math.round((totalRealCost / selling) * 10000) / 100,
+    profit: Math.round((selling - ingredientCost) * 100) / 100,
+    realProfit: Math.round((selling - totalRealCost) * 100) / 100,
   };
 }
 
@@ -150,38 +190,73 @@ function FoodCostPreview({
   ingredientMap: Map<number, Ingredient>;
 }) {
   const { t } = useTranslation();
-  const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap);
+  const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap, form.wastagePercent, form.energyCost);
   if (!result) return null;
 
-  const { totalCost, foodCostPct, profit } = result;
+  const { ingredientCost, totalRealCost, foodCostPct, realCostPct, profit, realProfit } = result;
+
+  const bgCls = foodCostPct <= 25
+    ? 'border-emerald-200 bg-emerald-50'
+    : foodCostPct <= 30
+      ? 'border-amber-200 bg-amber-50'
+      : 'border-red-200 bg-red-50';
 
   return (
-    <div
-      className={`flex items-center gap-4 rounded-xl border px-4 py-3 text-sm ${
-        foodCostPct <= 25
-          ? 'border-emerald-200 bg-emerald-50'
-          : foodCostPct <= 30
-            ? 'border-amber-200 bg-amber-50'
-            : 'border-red-200 bg-red-50'
-      }`}
-    >
-      <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.cost')}</p>
-        <p className="font-semibold text-stone-800">{fmt(totalCost)} €</p>
-      </div>
-      <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.foodCost')}</p>
-        <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>
-          {fmt(foodCostPct, 1)} %
-        </p>
-      </div>
-      <div className="flex-1">
-        <p className="text-xs font-medium text-stone-500">{t('recipes.preview.margin')}</p>
-        <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>
-          {fmt(profit)} €
-        </p>
+    <div className={`rounded-xl border px-4 py-3 text-sm ${bgCls}`}>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <p className="text-xs font-medium text-stone-500">{t('recipes.preview.cost')}</p>
+          <p className="font-semibold text-stone-800">{fmt(ingredientCost)} €</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-stone-500">{t('recipes.preview.foodCost')}</p>
+          <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>{fmt(foodCostPct, 1)} %</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-stone-500">{t('recipes.preview.margin')}</p>
+          <p className={`font-semibold ${foodCostTextCls(foodCostPct)}`}>{fmt(profit)} €</p>
+        </div>
+        {(totalRealCost !== ingredientCost) && (
+          <>
+            <div>
+              <p className="text-xs font-medium text-stone-500">{t('recipes.preview.realCost')}</p>
+              <p className="font-semibold text-stone-800">{fmt(totalRealCost)} €</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-stone-500">Coût réel %</p>
+              <p className={`font-semibold ${foodCostTextCls(realCostPct)}`}>{fmt(realCostPct, 1)} %</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-stone-500">{t('recipes.preview.realProfit')}</p>
+              <p className={`font-semibold ${foodCostTextCls(realCostPct)}`}>{fmt(realProfit)} €</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+// ── Tooltip helper ─────────────────────────────────────────────────────────
+
+function Tooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative ml-1 inline-block">
+      <button
+        type="button"
+        className="flex h-4 w-4 items-center justify-center rounded-full bg-stone-200 text-[10px] font-bold text-stone-500 hover:bg-stone-300"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      >
+        ?
+      </button>
+      {show && (
+        <span className="absolute bottom-full left-1/2 z-10 mb-1 w-48 -translate-x-1/2 rounded-lg bg-stone-800 px-3 py-2 text-xs text-white shadow-lg">
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -294,6 +369,68 @@ function RecipeFormModal({
           </div>
         </div>
 
+        {/* Coûts réels */}
+        <div className="rounded-xl border border-stone-100 bg-stone-50 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Coûts réels</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>{t('recipes.form.prepTime')}</label>
+              <input
+                className={inputCls}
+                type="number"
+                min="0"
+                step="1"
+                value={form.prepTimeMinutes}
+                onChange={setField('prepTimeMinutes')}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>{t('recipes.form.servings')}</label>
+              <input
+                className={inputCls}
+                type="number"
+                min="1"
+                step="1"
+                value={form.servings}
+                onChange={setField('servings')}
+                placeholder="1"
+              />
+            </div>
+            <div>
+              <label className={labelCls + ' flex items-center'}>
+                {t('recipes.form.wastage')}
+                <Tooltip text={t('recipes.form.wastageTooltip')} />
+              </label>
+              <input
+                className={inputCls}
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={form.wastagePercent}
+                onChange={setField('wastagePercent')}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className={labelCls + ' flex items-center'}>
+                {t('recipes.form.energyCost')}
+                <Tooltip text={t('recipes.form.energyCostTooltip')} />
+              </label>
+              <input
+                className={inputCls}
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.energyCost}
+                onChange={setField('energyCost')}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Ingrédients */}
         <div>
           <div className="mb-2 flex items-center justify-between">
@@ -310,7 +447,6 @@ function RecipeFormModal({
           <div className="space-y-2">
             {form.items.map((row, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                {/* Ingredient select */}
                 <select
                   value={row.ingredientId}
                   onChange={(e) => setItemField(idx, 'ingredientId', e.target.value)}
@@ -324,7 +460,6 @@ function RecipeFormModal({
                   ))}
                 </select>
 
-                {/* Quantity */}
                 <input
                   type="number"
                   min="0"
@@ -335,12 +470,10 @@ function RecipeFormModal({
                   className="w-24 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
 
-                {/* Unit label */}
                 <span className="w-10 text-xs text-stone-400">
                   {ingredientMap.get(parseInt(row.ingredientId))?.unit ?? ''}
                 </span>
 
-                {/* Remove */}
                 <button
                   type="button"
                   onClick={() => removeItem(idx)}
@@ -386,6 +519,42 @@ function RecipeFormModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+// ── Cost detail modal ──────────────────────────────────────────────────────
+
+function CostDetailModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
+  const { t } = useTranslation();
+  const fc = recipe.foodCost;
+
+  const rows = [
+    { label: t('recipes.detail.ingredientCost'), value: `${fmt(fc.ingredientCost)} €`, bold: false },
+    { label: t('recipes.detail.ingredientCostWithWaste'), value: `${fmt(fc.ingredientCostWithWaste)} €`, bold: false },
+    { label: t('recipes.detail.energyCost'), value: `${fmt(fc.energyCost)} €`, bold: false },
+    { label: t('recipes.detail.totalRealCost'), value: `${fmt(fc.totalRealCost)} €`, bold: true },
+    { label: t('recipes.detail.foodCostPct'), value: `${fmt(fc.foodCostPercent, 1)} %`, bold: false },
+    { label: t('recipes.detail.realCostPct'), value: `${fmt(fc.realCostPercent, 1)} %`, bold: false },
+    { label: t('recipes.detail.realProfit'), value: `${fmt(fc.realProfitPerDish)} €`, bold: true },
+  ];
+
+  return (
+    <Modal title={t('recipes.detail.title', { name: recipe.name })} onClose={onClose}>
+      <div className="space-y-1">
+        {rows.map(({ label, value, bold }) => (
+          <div key={label} className="flex items-center justify-between py-2 border-b border-stone-100 last:border-0">
+            <span className={`text-sm ${bold ? 'font-semibold text-stone-900' : 'text-stone-500'}`}>{label}</span>
+            <span className={`text-sm ${bold ? 'font-bold text-stone-900' : 'text-stone-700'}`}>{value}</span>
+          </div>
+        ))}
+        <div className="mt-3 flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2">
+          <span className="text-xs font-medium text-stone-500">RAG</span>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${ragBadgeCls(fc.ragStatus)}`}>
+            {ragDot(fc.ragStatus)} {t(`recipes.rag.${fc.ragStatus}`)}
+          </span>
+        </div>
+      </div>
     </Modal>
   );
 }
@@ -481,13 +650,18 @@ function SummaryBanner({ recipes }: { recipes: Recipe[] }) {
 type ActiveModal =
   | { type: 'create' }
   | { type: 'edit'; recipe: Recipe }
-  | { type: 'delete'; recipe: Recipe };
+  | { type: 'delete'; recipe: Recipe }
+  | { type: 'detail'; recipe: Recipe };
 
 function recipeToForm(r: Recipe): RecipeForm {
   return {
     name: r.name,
     category: r.category ?? '',
     sellingPrice: String(Number(r.sellingPrice)),
+    prepTimeMinutes: r.prepTimeMinutes != null ? String(r.prepTimeMinutes) : '',
+    servings: r.servings != null ? String(r.servings) : '1',
+    wastagePercent: r.wastagePercent != null ? String(Number(r.wastagePercent)) : '0',
+    energyCost: r.energyCost != null ? String(Number(r.energyCost)) : '0',
     notes: r.notes ?? '',
     items: r.items.length
       ? r.items.map((it) => ({
@@ -529,6 +703,10 @@ export function RecipesPage() {
       name: form.name,
       category: form.category || undefined,
       sellingPrice: parseFloat(form.sellingPrice),
+      prepTimeMinutes: form.prepTimeMinutes ? parseInt(form.prepTimeMinutes) : undefined,
+      servings: form.servings ? parseInt(form.servings) : 1,
+      wastagePercent: parseFloat(form.wastagePercent) || 0,
+      energyCost: parseFloat(form.energyCost) || 0,
       notes: form.notes || undefined,
       items: form.items
         .filter((r) => r.ingredientId && r.quantity)
@@ -623,6 +801,7 @@ export function RecipesPage() {
                     <th className="px-5 py-3 text-right">{t('recipes.table.foodCost')}</th>
                     <th className="px-5 py-3 text-right">{t('recipes.table.margin')}</th>
                     <th className="px-5 py-3">{t('recipes.table.status')}</th>
+                    <th className="px-5 py-3">{t('recipes.table.rag')}</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -653,7 +832,7 @@ export function RecipesPage() {
                       </td>
 
                       <td className="px-5 py-3 text-right text-stone-600">
-                        {fmt(r.foodCost.totalCost)} €
+                        {fmt(r.foodCost.totalRealCost)} €
                       </td>
 
                       <td className="px-5 py-3 text-right">
@@ -663,7 +842,7 @@ export function RecipesPage() {
                       </td>
 
                       <td className={`px-5 py-3 text-right font-semibold ${foodCostTextCls(r.foodCost.foodCostPercent)}`}>
-                        {fmt(r.foodCost.profitPerDish)} €
+                        {fmt(r.foodCost.realProfitPerDish)} €
                       </td>
 
                       <td className="px-5 py-3 text-xs">
@@ -671,7 +850,19 @@ export function RecipesPage() {
                       </td>
 
                       <td className="px-5 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ragBadgeCls(r.foodCost.ragStatus)}`}>
+                          {ragDot(r.foodCost.ragStatus)}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-3">
                         <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                          <button
+                            onClick={() => setModal({ type: 'detail', recipe: r })}
+                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+                          >
+                            €
+                          </button>
                           <button
                             onClick={() => setModal({ type: 'edit', recipe: r })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
@@ -721,6 +912,13 @@ export function RecipesPage() {
           recipe={modal.recipe}
           onConfirm={() => handleDelete(modal.recipe)}
           onCancel={() => setModal(null)}
+        />
+      )}
+
+      {modal?.type === 'detail' && (
+        <CostDetailModal
+          recipe={modal.recipe}
+          onClose={() => setModal(null)}
         />
       )}
     </>

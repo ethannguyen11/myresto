@@ -51,7 +51,8 @@
       "ratioSub": "{{pct}}% of menu",
       "profit": "Potential profit / service",
       "profitSub": "Sum of gross margins",
-      "profitableRecipes": "Profitable recipes"
+      "profitableRecipes": "Profitable recipes",
+      "redRecipes": "🔴 At-risk recipes"
     },
     "hero": {
       "label": "Average Food Cost",
@@ -197,6 +198,12 @@
       "category": "Category",
       "categoryPlaceholder": "Starter, Main, Dessert…",
       "sellingPrice": "Selling price incl. VAT (€) *",
+      "prepTime": "Prep time (min)",
+      "servings": "Servings",
+      "wastage": "Wastage (%)",
+      "wastageTooltip": "E.g. 15% for a fish fillet to be trimmed",
+      "energyCost": "Energy cost (€)",
+      "energyCostTooltip": "E.g. €0.50 for a dish baked for 30 min",
       "ingredients": "Ingredients *",
       "addIngredient": "Add",
       "chooseIngredient": "— Choose an ingredient —",
@@ -209,7 +216,27 @@
     "preview": {
       "cost": "Ingredient cost",
       "foodCost": "Food cost",
-      "margin": "Margin / dish"
+      "margin": "Margin / dish",
+      "realCost": "Real cost %",
+      "realProfit": "Real profit"
+    },
+    "detail": {
+      "title": "Cost breakdown — {{name}}",
+      "ingredientCost": "Ingredient cost",
+      "ingredientCostWithWaste": "Cost with waste",
+      "energyCost": "Energy cost",
+      "totalRealCost": "Total real cost",
+      "foodCostPct": "Food cost %",
+      "realCostPct": "Real cost %",
+      "realProfit": "Real profit"
+    },
+    "table": {
+      "rag": "RAG"
+    },
+    "rag": {
+      "green": "🟢 Green",
+      "amber": "🟡 Amber",
+      "red": "🔴 Red"
     },
     "delete": {
       "message": "Delete recipe {{name}}? This action is irreversible."
@@ -377,7 +404,16 @@
       "fcProgress": "FC Progress"
     },
     "otherCategory": "Other",
-    "loadError": "Unable to load recipes."
+    "loadError": "Unable to load recipes.",
+    "rag": {
+      "title": "RAG Analysis",
+      "green": "🟢 Green",
+      "amber": "🟡 Amber",
+      "red": "🔴 Red",
+      "redTitle": "At-risk recipes",
+      "suggestion": "Raise the selling price or reduce costs",
+      "noRed": "No red recipes — great management!"
+    }
   },
   "advisor": {
     "title": "AI Advisor",

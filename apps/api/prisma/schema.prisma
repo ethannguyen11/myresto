@@ -65,9 +65,13 @@ model Recipe {
   sellingPrice Decimal      // prix de vente TTC
   vatRate      Decimal      @default(0.10) // TVA (10% par défaut)
   isActive     Boolean      @default(true)
-  notes        String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  notes            String?
+  prepTimeMinutes  Int?
+  servings         Int?      @default(1)
+  wastagePercent   Decimal?  @default(0)
+  energyCost       Decimal?  @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   items        RecipeItem[]
 }

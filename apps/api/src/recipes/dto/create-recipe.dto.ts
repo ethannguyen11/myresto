@@ -10,5 +10,9 @@ export class CreateRecipeDto {
   sellingPrice: number
   vatRate?: number
   notes?: string
+  prepTimeMinutes?: number
+  servings?: number
+  wastagePercent?: number
+  energyCost?: number
   items: RecipeItemDto[]
 }

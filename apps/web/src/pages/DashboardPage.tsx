@@ -17,6 +17,7 @@ interface RecipeSummary {
   foodCostPercent: number;
   profitPerDish: number;
   status: string;
+  ragStatus?: 'green' | 'amber' | 'red';
 }
 
 interface PriceEvolution {
@@ -51,6 +52,12 @@ interface WeeklyAlertData {
 
 function fmt(n: number, dec = 2): string {
   return n.toFixed(dec).replace('.', ',');
+}
+
+function ragDot(pct: number): string {
+  if (pct <= 30) return '🟢';
+  if (pct <= 40) return '🟡';
+  return '🔴';
 }
 
 const LINE_COLORS = [
@@ -278,10 +285,10 @@ export function DashboardPage() {
           accent="text-stone-900 dark:text-white"
         />
         <KpiCard
-          icon="📈"
-          label={t('dashboard.kpi.profit')}
-          value={`${fmt(summary.totalPotentialProfit)} €`}
-          accent="text-emerald-600 dark:text-emerald-400"
+          icon="🔴"
+          label={t('dashboard.kpi.redRecipes')}
+          value={String(summary.nonRentableCount)}
+          accent={summary.nonRentableCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}
         />
       </div>
 
@@ -311,6 +318,40 @@ export function DashboardPage() {
           />
         </div>
       </div>
+
+      {/* ── Top recettes avec RAG ── */}
+      {data.topProfitable.length > 0 && (
+        <div>
+          <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
+            {t('dashboard.tables.topProfitable')}
+          </h2>
+          <div className="rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="divide-y divide-stone-100 dark:divide-gray-700">
+              {data.topProfitable.slice(0, 3).map((r) => (
+                <div key={r.id} className="flex items-center justify-between px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{ragDot(r.foodCostPercent)}</span>
+                    <div>
+                      <p className="text-sm font-medium text-stone-800 dark:text-white">{r.name}</p>
+                      {r.category && (
+                        <p className="text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      +{fmt(r.profitPerDish)} €
+                    </p>
+                    <p className="text-xs text-stone-400 dark:text-gray-500">
+                      FC {fmt(r.foodCostPercent, 1)} %
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Price evolution LineChart ── */}
       {chartData.length > 0 && (

@@ -51,7 +51,8 @@
       "ratioSub": "{{pct}} % du menu",
       "profit": "Profit potentiel / service",
       "profitSub": "Somme des marges brutes",
-      "profitableRecipes": "Recettes rentables"
+      "profitableRecipes": "Recettes rentables",
+      "redRecipes": "Recettes 🔴 à risque"
     },
     "hero": {
       "label": "Food Cost Moyen",
@@ -197,6 +198,12 @@
       "category": "Catégorie",
       "categoryPlaceholder": "Entrée, Plat, Dessert…",
       "sellingPrice": "Prix de vente TTC (€) *",
+      "prepTime": "Temps de préparation (min)",
+      "servings": "Nombre de portions",
+      "wastage": "Perte matière (%)",
+      "wastageTooltip": "Ex : 15 % pour un filet de poisson à découper",
+      "energyCost": "Coût énergie (€)",
+      "energyCostTooltip": "Ex : 0,50 € pour un plat passé au four 30 min",
       "ingredients": "Ingrédients *",
       "addIngredient": "Ajouter",
       "chooseIngredient": "— Choisir un ingrédient —",
@@ -209,7 +216,27 @@
     "preview": {
       "cost": "Coût ingrédients",
       "foodCost": "Food cost",
-      "margin": "Marge / plat"
+      "margin": "Marge / plat",
+      "realCost": "Coût réel %",
+      "realProfit": "Profit réel"
+    },
+    "detail": {
+      "title": "Détail des coûts — {{name}}",
+      "ingredientCost": "Coût ingrédients",
+      "ingredientCostWithWaste": "Coût avec pertes",
+      "energyCost": "Coût énergie",
+      "totalRealCost": "Coût total réel",
+      "foodCostPct": "Food cost %",
+      "realCostPct": "Coût réel %",
+      "realProfit": "Profit réel"
+    },
+    "table": {
+      "rag": "RAG"
+    },
+    "rag": {
+      "green": "🟢 Vert",
+      "amber": "🟡 Amber",
+      "red": "🔴 Rouge"
     },
     "delete": {
       "message": "Supprimer la recette {{name}} ? Cette action est irréversible."
@@ -377,7 +404,16 @@
       "fcProgress": "Progression FC"
     },
     "otherCategory": "Autre",
-    "loadError": "Impossible de charger les recettes."
+    "loadError": "Impossible de charger les recettes.",
+    "rag": {
+      "title": "Analyse RAG",
+      "green": "🟢 Vertes",
+      "amber": "🟡 Amber",
+      "red": "🔴 Rouges",
+      "redTitle": "Recettes à risque",
+      "suggestion": "Augmenter le prix de vente ou réduire les coûts",
+      "noRed": "Aucune recette en rouge — bonne gestion !"
+    }
   },
   "advisor": {
     "title": "Conseiller IA",
