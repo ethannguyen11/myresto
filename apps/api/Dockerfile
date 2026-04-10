@@ -27,6 +27,7 @@ ENV DATABASE_URL=$DATABASE_URL
 
 WORKDIR /app/apps/api
 
+RUN npm install dotenv --no-save
 RUN npx prisma generate
 RUN npm run build
 
