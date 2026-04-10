@@ -55,4 +55,4 @@ COPY apps/api/prisma ./apps/api/prisma
 WORKDIR /app/apps/api
 
 EXPOSE 3000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
