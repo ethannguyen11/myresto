@@ -797,12 +797,9 @@ export function RecipesPage() {
                     <th className="px-5 py-3">{t('recipes.table.recipe')}</th>
                     <th className="px-5 py-3">{t('recipes.table.category')}</th>
                     <th className="px-5 py-3 text-right">{t('recipes.table.sellingPrice')}</th>
-                    <th className="px-5 py-3 text-right">{t('recipes.table.totalCost')}</th>
                     <th className="px-5 py-3 text-right">{t('recipes.table.foodCost')}</th>
-                    <th className="px-5 py-3 text-right">{t('recipes.table.margin')}</th>
-                    <th className="px-5 py-3">{t('recipes.table.status')}</th>
                     <th className="px-5 py-3">{t('recipes.table.rag')}</th>
-                    <th className="px-5 py-3" />
+                    <th className="px-5 py-3">{t('recipes.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
@@ -831,22 +828,10 @@ export function RecipesPage() {
                         {fmt(Number(r.sellingPrice))} €
                       </td>
 
-                      <td className="px-5 py-3 text-right text-stone-600">
-                        {fmt(r.foodCost.totalRealCost)} €
-                      </td>
-
                       <td className="px-5 py-3 text-right">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${foodCostBadgeCls(r.foodCost.foodCostPercent)}`}>
                           {fmt(r.foodCost.foodCostPercent, 1)} %
                         </span>
-                      </td>
-
-                      <td className={`px-5 py-3 text-right font-semibold ${foodCostTextCls(r.foodCost.foodCostPercent)}`}>
-                        {fmt(r.foodCost.realProfitPerDish)} €
-                      </td>
-
-                      <td className="px-5 py-3 text-xs">
-                        {r.foodCost.status}
                       </td>
 
                       <td className="px-5 py-3">
@@ -856,7 +841,7 @@ export function RecipesPage() {
                       </td>
 
                       <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                        <div className="flex gap-1">
                           <button
                             onClick={() => setModal({ type: 'detail', recipe: r })}
                             className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"

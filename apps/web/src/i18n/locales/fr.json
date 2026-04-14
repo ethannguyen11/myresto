@@ -177,10 +177,9 @@
       "recipe": "Recette",
       "category": "Catégorie",
       "sellingPrice": "Prix vente",
-      "totalCost": "Coût total",
       "foodCost": "Food cost",
-      "margin": "Marge / plat",
-      "status": "Statut",
+      "rag": "Statut",
+      "actions": "Actions",
       "ingredientCount_one": "{{count}} ingrédient",
       "ingredientCount_other": "{{count}} ingrédients"
     },
@@ -229,9 +228,6 @@
       "foodCostPct": "Food cost %",
       "realCostPct": "Coût réel %",
       "realProfit": "Profit réel"
-    },
-    "table": {
-      "rag": "RAG"
     },
     "rag": {
       "green": "🟢 Vert",

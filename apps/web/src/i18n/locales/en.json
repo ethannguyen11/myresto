@@ -177,10 +177,9 @@
       "recipe": "Recipe",
       "category": "Category",
       "sellingPrice": "Selling price",
-      "totalCost": "Total cost",
       "foodCost": "Food cost",
-      "margin": "Margin / dish",
-      "status": "Status",
+      "rag": "Status",
+      "actions": "Actions",
       "ingredientCount_one": "{{count}} ingredient",
       "ingredientCount_other": "{{count}} ingredients"
     },
@@ -229,9 +228,6 @@
       "foodCostPct": "Food cost %",
       "realCostPct": "Real cost %",
       "realProfit": "Real profit"
-    },
-    "table": {
-      "rag": "RAG"
     },
     "rag": {
       "green": "🟢 Green",
