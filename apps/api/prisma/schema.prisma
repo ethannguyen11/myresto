@@ -23,6 +23,7 @@ model User {
   ingredients  Ingredient[]
   recipes      Recipe[]
   invoices     Invoice[]
+  techSheets   TechSheet[]
 }
 
 // ===== INGREDIENTS =====
@@ -69,7 +70,6 @@ model Recipe {
   prepTimeMinutes  Int?
   servings         Int?      @default(1)
   wastagePercent   Decimal?  @default(0)
-  energyCost       Decimal?  @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -127,6 +127,27 @@ model InvoiceItem {
   isConfirmed    Boolean     @default(false) // validé par l'utilisateur
   matchScore     Float?      // score de similarité 0-1
   matchMethod    String?     // "auto" | "suggestion" | "memory" | "none"
+}
+
+// ===== FICHES TECHNIQUES =====
+
+model TechSheet {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  recipeId     Int?     // lien optionnel avec une recette
+  name         String
+  category     String?
+  servings     Int      @default(4)
+  prepTime     Int?     // minutes
+  cookTime     Int?     // minutes
+  difficulty   String?  // "facile" | "moyen" | "difficile"
+  ingredients  String   @default("[]") // JSON array {ingredientId?,name,quantity,unit?,unitPrice?}
+  steps        String   @default("[]") // JSON array de strings
+  presentation String?
+  tips         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // ===== MÉMOIRE DES CORRESPONDANCES FACTURES =====

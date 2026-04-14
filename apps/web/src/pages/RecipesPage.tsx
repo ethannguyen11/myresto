@@ -22,7 +22,6 @@ interface FoodCost {
   totalCost: number;
   ingredientCost: number;
   ingredientCostWithWaste: number;
-  energyCost: number;
   totalRealCost: number;
   sellingPrice: number;
   foodCostPercent: number;
@@ -43,7 +42,6 @@ interface Recipe {
   prepTimeMinutes: number | null;
   servings: number | null;
   wastagePercent: number | null;
-  energyCost: number | null;
   items: RecipeItem[];
   foodCost: FoodCost;
 }
@@ -61,7 +59,6 @@ interface RecipeForm {
   prepTimeMinutes: string;
   servings: string;
   wastagePercent: string;
-  energyCost: string;
   notes: string;
   items: ItemRow[];
 }
@@ -73,7 +70,6 @@ const EMPTY_FORM: RecipeForm = {
   prepTimeMinutes: '',
   servings: '1',
   wastagePercent: '0',
-  energyCost: '0',
   notes: '',
   items: [{ ingredientId: '', quantity: '' }],
 };
@@ -116,7 +112,6 @@ function calcFoodCost(
   sellingPriceStr: string,
   ingredientMap: Map<number, Ingredient>,
   wastageStr: string,
-  energyCostStr: string,
 ): { ingredientCost: number; totalRealCost: number; foodCostPct: number; realCostPct: number; profit: number; realProfit: number } | null {
   const selling = parseFloat(sellingPriceStr);
   if (!selling || selling <= 0) return null;
@@ -130,9 +125,7 @@ function calcFoodCost(
   }
 
   const wastage = (parseFloat(wastageStr) || 0) / 100;
-  const ingredientCostWithWaste = ingredientCost * (1 + wastage);
-  const energyCost = parseFloat(energyCostStr) || 0;
-  const totalRealCost = ingredientCostWithWaste + energyCost;
+  const totalRealCost = ingredientCost * (1 + wastage);
 
   return {
     ingredientCost: Math.round(ingredientCost * 100) / 100,
@@ -190,7 +183,7 @@ function FoodCostPreview({
   ingredientMap: Map<number, Ingredient>;
 }) {
   const { t } = useTranslation();
-  const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap, form.wastagePercent, form.energyCost);
+  const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap, form.wastagePercent);
   if (!result) return null;
 
   const { ingredientCost, totalRealCost, foodCostPct, realCostPct, profit, realProfit } = result;
@@ -413,21 +406,6 @@ function RecipeFormModal({
                 placeholder="0"
               />
             </div>
-            <div>
-              <label className={labelCls + ' flex items-center'}>
-                {t('recipes.form.energyCost')}
-                <Tooltip text={t('recipes.form.energyCostTooltip')} />
-              </label>
-              <input
-                className={inputCls}
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.energyCost}
-                onChange={setField('energyCost')}
-                placeholder="0,00"
-              />
-            </div>
           </div>
         </div>
 
@@ -531,9 +509,7 @@ function CostDetailModal({ recipe, onClose }: { recipe: Recipe; onClose: () => v
 
   const rows = [
     { label: t('recipes.detail.ingredientCost'), value: `${fmt(fc.ingredientCost)} €`, bold: false },
-    { label: t('recipes.detail.ingredientCostWithWaste'), value: `${fmt(fc.ingredientCostWithWaste)} €`, bold: false },
-    { label: t('recipes.detail.energyCost'), value: `${fmt(fc.energyCost)} €`, bold: false },
-    { label: t('recipes.detail.totalRealCost'), value: `${fmt(fc.totalRealCost)} €`, bold: true },
+    { label: t('recipes.detail.ingredientCostWithWaste'), value: `${fmt(fc.ingredientCostWithWaste)} €`, bold: true },
     { label: t('recipes.detail.foodCostPct'), value: `${fmt(fc.foodCostPercent, 1)} %`, bold: false },
     { label: t('recipes.detail.realCostPct'), value: `${fmt(fc.realCostPercent, 1)} %`, bold: false },
     { label: t('recipes.detail.realProfit'), value: `${fmt(fc.realProfitPerDish)} €`, bold: true },
@@ -661,7 +637,6 @@ function recipeToForm(r: Recipe): RecipeForm {
     prepTimeMinutes: r.prepTimeMinutes != null ? String(r.prepTimeMinutes) : '',
     servings: r.servings != null ? String(r.servings) : '1',
     wastagePercent: r.wastagePercent != null ? String(Number(r.wastagePercent)) : '0',
-    energyCost: r.energyCost != null ? String(Number(r.energyCost)) : '0',
     notes: r.notes ?? '',
     items: r.items.length
       ? r.items.map((it) => ({
@@ -706,7 +681,6 @@ export function RecipesPage() {
       prepTimeMinutes: form.prepTimeMinutes ? parseInt(form.prepTimeMinutes) : undefined,
       servings: form.servings ? parseInt(form.servings) : 1,
       wastagePercent: parseFloat(form.wastagePercent) || 0,
-      energyCost: parseFloat(form.energyCost) || 0,
       notes: form.notes || undefined,
       items: form.items
         .filter((r) => r.ingredientId && r.quantity)

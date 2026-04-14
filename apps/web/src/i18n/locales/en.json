@@ -5,7 +5,8 @@
     "recipes": "Recipes",
     "invoices": "Invoices",
     "advisor": "AI Advisor",
-    "logout": "Logout"
+    "logout": "Logout",
+    "techSheets": "Tech Sheets"
   },
   "lang": {
     "switch": "FR",
@@ -201,8 +202,6 @@
       "servings": "Servings",
       "wastage": "Wastage (%)",
       "wastageTooltip": "E.g. 15% for a fish fillet to be trimmed",
-      "energyCost": "Energy cost (€)",
-      "energyCostTooltip": "E.g. €0.50 for a dish baked for 30 min",
       "ingredients": "Ingredients *",
       "addIngredient": "Add",
       "chooseIngredient": "— Choose an ingredient —",
@@ -222,9 +221,7 @@
     "detail": {
       "title": "Cost breakdown — {{name}}",
       "ingredientCost": "Ingredient cost",
-      "ingredientCostWithWaste": "Cost with waste",
-      "energyCost": "Energy cost",
-      "totalRealCost": "Total real cost",
+      "ingredientCostWithWaste": "Cost with wastage",
       "foodCostPct": "Food cost %",
       "realCostPct": "Real cost %",
       "realProfit": "Real profit"
@@ -321,6 +318,66 @@
       "displayed_other": "{{count}} invoices shown",
       "noResults": "No invoices for these filters."
     }
+  },
+  "techSheets": {
+    "title": "Tech Sheets",
+    "subtitle_one": "{{count}} sheet",
+    "subtitle_other": "{{count}} sheets",
+    "add": "New sheet",
+    "empty": {
+      "title": "No tech sheets",
+      "desc": "Create your first sheet to document your recipes."
+    },
+    "table": {
+      "name": "Name",
+      "category": "Category",
+      "servings": "Servings",
+      "difficulty": "Difficulty",
+      "times": "Times",
+      "actions": "Actions"
+    },
+    "difficulty": {
+      "facile": "Easy",
+      "moyen": "Medium",
+      "difficile": "Hard"
+    },
+    "form": {
+      "createTitle": "New tech sheet",
+      "editTitle": "Edit — {{name}}",
+      "name": "Recipe name *",
+      "namePlaceholder": "e.g. Roasted duck breast",
+      "category": "Category",
+      "categoryPlaceholder": "Starter, Main, Dessert…",
+      "servings": "Servings",
+      "prepTime": "Prep time (min)",
+      "cookTime": "Cook time (min)",
+      "difficulty": "Difficulty",
+      "difficultyPlaceholder": "Choose…",
+      "ingredientsSection": "Ingredients",
+      "addIngredient": "+ Ingredient",
+      "ingredientName": "Name",
+      "ingredientNamePlaceholder": "e.g. AOP Butter",
+      "ingredientQty": "Quantity",
+      "ingredientQtyPlaceholder": "e.g. 200",
+      "ingredientUnit": "Unit",
+      "ingredientUnitPlaceholder": "g, kg, L…",
+      "ingredientPrice": "Price (€)",
+      "chooseIngredient": "— From catalogue —",
+      "stepsSection": "Steps",
+      "addStep": "+ Step",
+      "stepPlaceholder": "Describe this step…",
+      "presentationSection": "Presentation / Plating",
+      "presentationPlaceholder": "Describe the plate presentation…",
+      "tipsSection": "Chef's tips",
+      "tipsPlaceholder": "Tips, alternatives, key points…",
+      "save": "Save sheet"
+    },
+    "print": "Print / PDF",
+    "delete": {
+      "message": "Delete sheet {{name}}? This action is irreversible."
+    },
+    "loadError": "Unable to load tech sheets.",
+    "min": "min"
   },
   "library": {
     "button": "Library",

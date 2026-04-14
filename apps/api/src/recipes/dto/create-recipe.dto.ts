@@ -13,6 +13,5 @@ export class CreateRecipeDto {
   prepTimeMinutes?: number
   servings?: number
   wastagePercent?: number
-  energyCost?: number
   items: RecipeItemDto[]
 }

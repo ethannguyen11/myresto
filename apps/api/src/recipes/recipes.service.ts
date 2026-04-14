@@ -21,18 +21,15 @@ export class RecipesService {
     const wastage = Number(recipe?.wastagePercent ?? 0) / 100
     const ingredientCostWithWaste = ingredientCost * (1 + wastage)
 
-    // Coût énergie
-    const energyCost = Number(recipe?.energyCost ?? 0)
-
-    // Coût total réel
-    const totalRealCost = ingredientCostWithWaste + energyCost
+    // Coût total réel = ingrédients + pertes uniquement
+    const totalRealCost = ingredientCostWithWaste
 
     const selling = Number(sellingPrice)
 
     // Food cost % (ingrédients seulement — métrique classique)
     const foodCostPercent = selling > 0 ? (ingredientCost / selling) * 100 : 0
 
-    // Coût réel % (tous les coûts)
+    // Coût réel % (ingrédients + pertes)
     const realCostPercent = selling > 0 ? (totalRealCost / selling) * 100 : 0
 
     // RAG Status basé sur le coût réel
@@ -43,7 +40,6 @@ export class RecipesService {
       totalCost: this.round(ingredientCost),                    // compat
       ingredientCost: this.round(ingredientCost),
       ingredientCostWithWaste: this.round(ingredientCostWithWaste),
-      energyCost: this.round(energyCost),
       totalRealCost: this.round(totalRealCost),
       sellingPrice: selling,
       foodCostPercent: this.round(foodCostPercent),
@@ -104,7 +100,6 @@ export class RecipesService {
         prepTimeMinutes: dto.prepTimeMinutes,
         servings: dto.servings ?? 1,
         wastagePercent: dto.wastagePercent ?? 0,
-        energyCost: dto.energyCost ?? 0,
         items: {
           create: dto.items.map(item => ({
             ingredientId: item.ingredientId,
@@ -142,7 +137,6 @@ export class RecipesService {
         prepTimeMinutes: dto.prepTimeMinutes,
         ...(dto.servings !== undefined && { servings: dto.servings }),
         ...(dto.wastagePercent !== undefined && { wastagePercent: dto.wastagePercent }),
-        ...(dto.energyCost !== undefined && { energyCost: dto.energyCost }),
         ...(dto.items && {
           items: {
             create: dto.items.map(item => ({

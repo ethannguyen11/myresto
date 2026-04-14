@@ -47,6 +47,7 @@ export function DashboardLayout() {
     { to: '/advisor', label: t('nav.advisor'), icon: '🤖' },
     { to: '/alerts', label: 'Alertes', icon: '🔔', badge: alertCount },
     { to: '/analytics', label: 'Analytiques', icon: '📈' },
+    { to: '/tech-sheets', label: t('nav.techSheets'), icon: '📋' },
   ];
 
   function toggleLang() {

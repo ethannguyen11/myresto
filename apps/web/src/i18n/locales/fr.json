@@ -5,7 +5,8 @@
     "recipes": "Recettes",
     "invoices": "Factures",
     "advisor": "Conseiller IA",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "techSheets": "Fiches techniques"
   },
   "lang": {
     "switch": "EN",
@@ -201,8 +202,6 @@
       "servings": "Nombre de portions",
       "wastage": "Perte matière (%)",
       "wastageTooltip": "Ex : 15 % pour un filet de poisson à découper",
-      "energyCost": "Coût énergie (€)",
-      "energyCostTooltip": "Ex : 0,50 € pour un plat passé au four 30 min",
       "ingredients": "Ingrédients *",
       "addIngredient": "Ajouter",
       "chooseIngredient": "— Choisir un ingrédient —",
@@ -222,9 +221,7 @@
     "detail": {
       "title": "Détail des coûts — {{name}}",
       "ingredientCost": "Coût ingrédients",
-      "ingredientCostWithWaste": "Coût avec pertes",
-      "energyCost": "Coût énergie",
-      "totalRealCost": "Coût total réel",
+      "ingredientCostWithWaste": "Coût avec pertes matière",
       "foodCostPct": "Food cost %",
       "realCostPct": "Coût réel %",
       "realProfit": "Profit réel"
@@ -321,6 +318,66 @@
       "displayed_other": "{{count}} factures affichées",
       "noResults": "Aucune facture pour ces filtres."
     }
+  },
+  "techSheets": {
+    "title": "Fiches techniques",
+    "subtitle_one": "{{count}} fiche",
+    "subtitle_other": "{{count}} fiches",
+    "add": "Nouvelle fiche",
+    "empty": {
+      "title": "Aucune fiche technique",
+      "desc": "Créez votre première fiche pour documenter vos recettes."
+    },
+    "table": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "servings": "Couverts",
+      "difficulty": "Difficulté",
+      "times": "Temps",
+      "actions": "Actions"
+    },
+    "difficulty": {
+      "facile": "Facile",
+      "moyen": "Moyen",
+      "difficile": "Difficile"
+    },
+    "form": {
+      "createTitle": "Nouvelle fiche technique",
+      "editTitle": "Modifier — {{name}}",
+      "name": "Nom de la recette *",
+      "namePlaceholder": "ex. Magret de canard rôti",
+      "category": "Catégorie",
+      "categoryPlaceholder": "Entrée, Plat, Dessert…",
+      "servings": "Nombre de couverts",
+      "prepTime": "Temps de préparation (min)",
+      "cookTime": "Temps de cuisson (min)",
+      "difficulty": "Difficulté",
+      "difficultyPlaceholder": "Choisir…",
+      "ingredientsSection": "Ingrédients",
+      "addIngredient": "+ Ingrédient",
+      "ingredientName": "Nom",
+      "ingredientNamePlaceholder": "ex. Beurre AOP",
+      "ingredientQty": "Quantité",
+      "ingredientQtyPlaceholder": "ex. 200",
+      "ingredientUnit": "Unité",
+      "ingredientUnitPlaceholder": "g, kg, L…",
+      "ingredientPrice": "Prix (€)",
+      "chooseIngredient": "— Depuis catalogue —",
+      "stepsSection": "Progression",
+      "addStep": "+ Étape",
+      "stepPlaceholder": "Décrire cette étape…",
+      "presentationSection": "Présentation / Dressage",
+      "presentationPlaceholder": "Décrivez le dressage de l'assiette…",
+      "tipsSection": "Conseils du chef",
+      "tipsPlaceholder": "Astuces, alternatives, points de vigilance…",
+      "save": "Enregistrer la fiche"
+    },
+    "print": "Imprimer / PDF",
+    "delete": {
+      "message": "Supprimer la fiche {{name}} ? Cette action est irréversible."
+    },
+    "loadError": "Impossible de charger les fiches techniques.",
+    "min": "min"
   },
   "library": {
     "button": "Bibliothèque",

@@ -9,6 +9,7 @@ import { InvoicesPage } from './pages/InvoicesPage';
 import { AdvisorPage } from './pages/AdvisorPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { TechSheetPage } from './pages/TechSheetPage';
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
           { path: 'advisor', element: <AdvisorPage /> },
           { path: 'alerts', element: <AlertsPage /> },
           { path: 'analytics', element: <AnalyticsPage /> },
+          { path: 'tech-sheets', element: <TechSheetPage /> },
         ],
       },
     ],
