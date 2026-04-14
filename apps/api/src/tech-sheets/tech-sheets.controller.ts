@@ -21,24 +21,24 @@ export class TechSheetsController {
 
   @Post('validate')
   validate(@Req() req: any, @Body() dto: ValidateTechSheetDto) {
-    return this.service.validate(req.user.id, dto)
+    return this.service.validate(req.user.sub, dto)
   }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
   @Get()
   findAll(@Req() req: any) {
-    return this.service.findAll(req.user.id)
+    return this.service.findAll(req.user.sub)
   }
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.service.findOne(id, req.user.id)
+    return this.service.findOne(id, req.user.sub)
   }
 
   @Post()
   create(@Req() req: any, @Body() dto: CreateTechSheetDto) {
-    return this.service.create(req.user.id, dto)
+    return this.service.create(req.user.sub, dto)
   }
 
   @Put(':id')
@@ -47,12 +47,12 @@ export class TechSheetsController {
     @Req() req: any,
     @Body() dto: UpdateTechSheetDto,
   ) {
-    return this.service.update(id, req.user.id, dto)
+    return this.service.update(id, req.user.sub, dto)
   }
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.service.remove(id, req.user.id)
+    return this.service.remove(id, req.user.sub)
   }
 
   @Get(':id/pdf')
@@ -61,7 +61,7 @@ export class TechSheetsController {
     @Req() req: any,
     @Res() res: Response,
   ) {
-    const html = await this.service.getPdfHtml(id, req.user.id)
+    const html = await this.service.getPdfHtml(id, req.user.sub)
     res.setHeader('Content-Type', 'text/html; charset=utf-8')
     res.send(html)
   }
