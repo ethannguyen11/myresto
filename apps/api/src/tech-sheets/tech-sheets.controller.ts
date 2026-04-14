@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Req, Res, UseGuards } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { memoryStorage } from 'multer'
 import type { Response } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { TechSheetsService } from './tech-sheets.service'
@@ -13,6 +15,14 @@ export class TechSheetsController {
   constructor(private readonly service: TechSheetsService) {}
 
   // ── AI routes (must be before /:id to avoid param conflict) ───────────────
+
+  @Post('transcribe')
+  @UseInterceptors(FileInterceptor('audio', { storage: memoryStorage() }))
+  transcribe(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Aucun fichier audio reçu')
+    const mimeType = file.mimetype || 'audio/m4a'
+    return this.service.transcribeAudio(file.buffer, mimeType)
+  }
 
   @Post('generate')
   generate(@Body() dto: GenerateTechSheetDto) {

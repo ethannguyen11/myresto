@@ -44,6 +44,44 @@ export class TechSheetsService {
     this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   }
 
+  // ── Audio transcription ───────────────────────────────────────────────────
+
+  async transcribeAudio(buffer: Buffer, mimeType: string): Promise<{ transcription: string }> {
+    const base64 = buffer.toString('base64')
+
+    const msg = await this.client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: mimeType as 'audio/m4a' | 'audio/wav' | 'audio/mpeg' | 'audio/ogg',
+                data: base64,
+              },
+            } as any,
+            {
+              type: 'text',
+              text: 'Transcris cet enregistrement vocal d\'un chef qui décrit une recette. Retourne uniquement le texte transcrit, sans mise en forme.',
+            },
+          ],
+        },
+      ],
+    })
+
+    const transcription = msg.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as { type: 'text'; text: string }).text)
+      .join('')
+      .trim()
+
+    return { transcription }
+  }
+
   // ── AI generation ─────────────────────────────────────────────────────────
 
   async generateFromDescription(description: string): Promise<GeneratedTechSheet> {

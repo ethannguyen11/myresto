@@ -35,6 +35,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="techsheet"
+        options={{
+          title: 'Fiches',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon emoji="📋" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="advisor"
         options={{
           title: 'Conseiller',

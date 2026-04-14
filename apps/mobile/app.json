@@ -42,7 +42,10 @@
       "expo-image-picker",
       "expo-asset",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      ["expo-av", {
+        "microphonePermission": "Chef IA utilise le micro pour dicter vos recettes"
+      }]
     ],
     "extra": {
       "router": {},
