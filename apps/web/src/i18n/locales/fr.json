@@ -323,60 +323,76 @@
     "title": "Fiches techniques",
     "subtitle_one": "{{count}} fiche",
     "subtitle_other": "{{count}} fiches",
-    "add": "Nouvelle fiche",
-    "empty": {
-      "title": "Aucune fiche technique",
-      "desc": "Créez votre première fiche pour documenter vos recettes."
-    },
+    "newSheet": "Nouvelle fiche",
+    "backToList": "← Retour à la liste",
     "table": {
       "name": "Nom",
       "category": "Catégorie",
       "servings": "Couverts",
       "difficulty": "Difficulté",
-      "times": "Temps",
+      "date": "Date",
       "actions": "Actions"
     },
     "difficulty": {
+      "Facile": "Facile",
+      "Moyen": "Moyen",
+      "Difficile": "Difficile",
       "facile": "Facile",
       "moyen": "Moyen",
       "difficile": "Difficile"
     },
-    "form": {
-      "createTitle": "Nouvelle fiche technique",
-      "editTitle": "Modifier — {{name}}",
-      "name": "Nom de la recette *",
-      "namePlaceholder": "ex. Magret de canard rôti",
-      "category": "Catégorie",
-      "categoryPlaceholder": "Entrée, Plat, Dessert…",
-      "servings": "Nombre de couverts",
-      "prepTime": "Temps de préparation (min)",
-      "cookTime": "Temps de cuisson (min)",
-      "difficulty": "Difficulté",
-      "difficultyPlaceholder": "Choisir…",
-      "ingredientsSection": "Ingrédients",
-      "addIngredient": "+ Ingrédient",
-      "ingredientName": "Nom",
-      "ingredientNamePlaceholder": "ex. Beurre AOP",
-      "ingredientQty": "Quantité",
-      "ingredientQtyPlaceholder": "ex. 200",
-      "ingredientUnit": "Unité",
-      "ingredientUnitPlaceholder": "g, kg, L…",
-      "ingredientPrice": "Prix (€)",
-      "chooseIngredient": "— Depuis catalogue —",
-      "stepsSection": "Progression",
-      "addStep": "+ Étape",
-      "stepPlaceholder": "Décrire cette étape…",
-      "presentationSection": "Présentation / Dressage",
-      "presentationPlaceholder": "Décrivez le dressage de l'assiette…",
-      "tipsSection": "Conseils du chef",
-      "tipsPlaceholder": "Astuces, alternatives, points de vigilance…",
-      "save": "Enregistrer la fiche"
+    "empty": {
+      "title": "Aucune fiche technique",
+      "desc": "Décrivez une recette en texte libre et laissez l'IA structurer la fiche pour vous."
     },
-    "print": "Imprimer / PDF",
+    "step1": {
+      "title": "Décrivez votre recette",
+      "subtitle": "L'IA va générer une fiche technique structurée à partir de votre description libre",
+      "placeholder": "Décrivez votre recette librement…\nEx : Pavé de saumon poêlé pour 4 personnes avec beurre blanc à l'estragon. Saisir le saumon 3 min de chaque côté dans une poêle chaude avec du beurre. Préparer le beurre blanc séparément avec échalotes, vin blanc et crème. Servir avec des haricots verts al dente.",
+      "generate": "✨ Générer la fiche technique",
+      "generating": "Génération en cours…"
+    },
+    "step2": {
+      "title": "Prévisualisation",
+      "subtitle": "Vérifiez la fiche générée par l'IA avant de la sauvegarder",
+      "validate": "✅ Valider et sauvegarder",
+      "saving": "Sauvegarde…",
+      "edit": "✏️ Modifier la description",
+      "servings": "{{n}} couvert",
+      "servings_plural": "{{n}} couverts",
+      "prep": "Prép. {{n}} min",
+      "cook": "Cuisson {{n}} min",
+      "ingredients": "Ingrédients",
+      "steps": "Progression",
+      "presentation": "Présentation",
+      "tips": "Conseils du chef"
+    },
+    "step3": {
+      "title": "Fiche sauvegardée !",
+      "subtitle": "Votre fiche technique a été créée avec succès.",
+      "viewSheet": "Voir la fiche",
+      "newSheet": "Nouvelle fiche"
+    },
+    "detail": {
+      "servings": "Couverts",
+      "prep": "Préparation",
+      "cook": "Cuisson",
+      "difficulty": "Difficulté",
+      "ingredients": "Ingrédients",
+      "steps": "Progression",
+      "presentation": "Présentation / Dressage",
+      "tips": "Conseils du chef",
+      "name": "Ingrédient",
+      "quantity": "Quantité",
+      "unit": "Unité"
+    },
+    "print": "🖨️ Imprimer",
     "delete": {
-      "message": "Supprimer la fiche {{name}} ? Cette action est irréversible."
+      "message": "Supprimer la fiche «{{name}}» ? Cette action est irréversible."
     },
     "loadError": "Impossible de charger les fiches techniques.",
+    "generateError": "Erreur lors de la génération. Réessayez.",
+    "saveError": "Erreur lors de la sauvegarde.",
     "min": "min"
   },
   "library": {

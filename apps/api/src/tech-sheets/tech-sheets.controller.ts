@@ -4,11 +4,27 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { TechSheetsService } from './tech-sheets.service'
 import { CreateTechSheetDto } from './dto/create-tech-sheet.dto'
 import { UpdateTechSheetDto } from './dto/update-tech-sheet.dto'
+import { GenerateTechSheetDto } from './dto/generate-tech-sheet.dto'
+import { ValidateTechSheetDto } from './dto/validate-tech-sheet.dto'
 
 @UseGuards(JwtAuthGuard)
 @Controller('tech-sheets')
 export class TechSheetsController {
   constructor(private readonly service: TechSheetsService) {}
+
+  // ── AI routes (must be before /:id to avoid param conflict) ───────────────
+
+  @Post('generate')
+  generate(@Body() dto: GenerateTechSheetDto) {
+    return this.service.generateFromDescription(dto.description)
+  }
+
+  @Post('validate')
+  validate(@Req() req: any, @Body() dto: ValidateTechSheetDto) {
+    return this.service.validate(req.user.id, dto)
+  }
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
 
   @Get()
   findAll(@Req() req: any) {

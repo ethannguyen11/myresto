@@ -323,60 +323,76 @@
     "title": "Tech Sheets",
     "subtitle_one": "{{count}} sheet",
     "subtitle_other": "{{count}} sheets",
-    "add": "New sheet",
-    "empty": {
-      "title": "No tech sheets",
-      "desc": "Create your first sheet to document your recipes."
-    },
+    "newSheet": "New sheet",
+    "backToList": "← Back to list",
     "table": {
       "name": "Name",
       "category": "Category",
       "servings": "Servings",
       "difficulty": "Difficulty",
-      "times": "Times",
+      "date": "Date",
       "actions": "Actions"
     },
     "difficulty": {
+      "Facile": "Easy",
+      "Moyen": "Medium",
+      "Difficile": "Hard",
       "facile": "Easy",
       "moyen": "Medium",
       "difficile": "Hard"
     },
-    "form": {
-      "createTitle": "New tech sheet",
-      "editTitle": "Edit — {{name}}",
-      "name": "Recipe name *",
-      "namePlaceholder": "e.g. Roasted duck breast",
-      "category": "Category",
-      "categoryPlaceholder": "Starter, Main, Dessert…",
-      "servings": "Servings",
-      "prepTime": "Prep time (min)",
-      "cookTime": "Cook time (min)",
-      "difficulty": "Difficulty",
-      "difficultyPlaceholder": "Choose…",
-      "ingredientsSection": "Ingredients",
-      "addIngredient": "+ Ingredient",
-      "ingredientName": "Name",
-      "ingredientNamePlaceholder": "e.g. AOP Butter",
-      "ingredientQty": "Quantity",
-      "ingredientQtyPlaceholder": "e.g. 200",
-      "ingredientUnit": "Unit",
-      "ingredientUnitPlaceholder": "g, kg, L…",
-      "ingredientPrice": "Price (€)",
-      "chooseIngredient": "— From catalogue —",
-      "stepsSection": "Steps",
-      "addStep": "+ Step",
-      "stepPlaceholder": "Describe this step…",
-      "presentationSection": "Presentation / Plating",
-      "presentationPlaceholder": "Describe the plate presentation…",
-      "tipsSection": "Chef's tips",
-      "tipsPlaceholder": "Tips, alternatives, key points…",
-      "save": "Save sheet"
+    "empty": {
+      "title": "No tech sheets yet",
+      "desc": "Describe a recipe in free text and let the AI structure it for you."
     },
-    "print": "Print / PDF",
+    "step1": {
+      "title": "Describe your recipe",
+      "subtitle": "The AI will generate a structured tech sheet from your free-text description",
+      "placeholder": "Describe your recipe freely…\nE.g.: Pan-seared salmon fillet for 4 with tarragon beurre blanc. Sear the salmon 3 min each side in a hot buttered pan. Prepare the beurre blanc separately with shallots, white wine and cream. Serve with al dente green beans.",
+      "generate": "✨ Generate tech sheet",
+      "generating": "Generating…"
+    },
+    "step2": {
+      "title": "Preview",
+      "subtitle": "Review the AI-generated sheet before saving",
+      "validate": "✅ Validate & save",
+      "saving": "Saving…",
+      "edit": "✏️ Edit description",
+      "servings": "{{n}} serving",
+      "servings_plural": "{{n}} servings",
+      "prep": "Prep {{n}} min",
+      "cook": "Cook {{n}} min",
+      "ingredients": "Ingredients",
+      "steps": "Steps",
+      "presentation": "Presentation",
+      "tips": "Chef's tips"
+    },
+    "step3": {
+      "title": "Sheet saved!",
+      "subtitle": "Your tech sheet has been created successfully.",
+      "viewSheet": "View sheet",
+      "newSheet": "New sheet"
+    },
+    "detail": {
+      "servings": "Servings",
+      "prep": "Prep",
+      "cook": "Cook",
+      "difficulty": "Difficulty",
+      "ingredients": "Ingredients",
+      "steps": "Steps",
+      "presentation": "Presentation / Plating",
+      "tips": "Chef's tips",
+      "name": "Ingredient",
+      "quantity": "Quantity",
+      "unit": "Unit"
+    },
+    "print": "🖨️ Print",
     "delete": {
-      "message": "Delete sheet {{name}}? This action is irreversible."
+      "message": "Delete sheet «{{name}}»? This action is irreversible."
     },
     "loadError": "Unable to load tech sheets.",
+    "generateError": "Generation failed. Please try again.",
+    "saveError": "Save failed.",
     "min": "min"
   },
   "library": {
