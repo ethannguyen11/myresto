@@ -166,7 +166,7 @@ function QuickAction({
 
 function KpiCard({ icon, label, value, accent }: { icon: string; label: string; value: string; accent?: string }) {
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-transform hover:scale-[1.02] dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm transition-transform hover:scale-[1.02] dark:border-gray-600 dark:bg-gray-800">
       <span className="text-3xl">{icon}</span>
       <p className={`mt-3 text-2xl font-bold tracking-tight ${accent ?? 'text-stone-900 dark:text-white'}`}>
         {value}

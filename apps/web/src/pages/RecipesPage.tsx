@@ -81,17 +81,17 @@ function fmt(n: number, dec = 2): string {
 }
 
 function foodCostBadgeCls(pct: number): string {
-  if (pct <= 25) return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
-  if (pct <= 30) return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
-  if (pct <= 35) return 'bg-orange-50 text-orange-700 ring-1 ring-orange-200';
-  return 'bg-red-50 text-red-700 ring-1 ring-red-200';
+  if (pct <= 25) return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800';
+  if (pct <= 30) return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800';
+  if (pct <= 35) return 'bg-orange-50 text-orange-700 ring-1 ring-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:ring-orange-800';
+  return 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-800';
 }
 
 function foodCostTextCls(pct: number): string {
-  if (pct <= 25) return 'text-emerald-600';
-  if (pct <= 30) return 'text-amber-500';
-  if (pct <= 35) return 'text-orange-500';
-  return 'text-red-500';
+  if (pct <= 25) return 'text-emerald-600 dark:text-emerald-400';
+  if (pct <= 30) return 'text-amber-500 dark:text-amber-400';
+  if (pct <= 35) return 'text-orange-500 dark:text-orange-400';
+  return 'text-red-500 dark:text-red-400';
 }
 
 function ragDot(status: 'green' | 'amber' | 'red'): string {
@@ -101,9 +101,15 @@ function ragDot(status: 'green' | 'amber' | 'red'): string {
 }
 
 function ragBadgeCls(status: 'green' | 'amber' | 'red'): string {
-  if (status === 'green') return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200';
-  if (status === 'amber') return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
-  return 'bg-red-50 text-red-700 ring-1 ring-red-200';
+  if (status === 'green') return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800';
+  if (status === 'amber') return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800';
+  return 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-800';
+}
+
+function ragLeftBorderColor(status: 'green' | 'amber' | 'red'): string {
+  if (status === 'green') return '#16a34a';
+  if (status === 'amber') return '#d97706';
+  return '#dc2626';
 }
 
 /** Recalculate food cost locally — mirrors server logic */
@@ -157,12 +163,12 @@ function Modal({
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-12 backdrop-blur-sm"
       onMouseDown={(e) => { if (e.target === backdropRef.current) onClose(); }}
     >
-      <div className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl`}>
-        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <h2 className="text-sm font-semibold text-stone-900">{title}</h2>
+      <div className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900`}>
+        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4 dark:border-gray-700">
+          <h2 className="text-sm font-semibold text-stone-900 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+            className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-gray-800"
           >
             ✕
           </button>
@@ -316,8 +322,9 @@ function RecipeFormModal({
 
   const inputCls =
     'w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 ' +
-    'placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20';
-  const labelCls = 'mb-1.5 block text-xs font-medium text-stone-600';
+    'placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ' +
+    'dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500';
+  const labelCls = 'mb-1.5 block text-xs font-medium text-stone-600 dark:text-gray-400';
 
   return (
     <Modal title={title} wide onClose={onClose}>
@@ -766,37 +773,45 @@ export function RecipesPage() {
           <>
             {/* ── Mobile cards ── */}
             <div className="space-y-3 md:hidden">
-              {recipes.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setModal({ type: 'edit', recipe: r })}
-                  className="flex w-full items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-emerald-300 hover:bg-stone-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-600"
-                  style={{ minHeight: '72px' }}
-                >
-                  {/* RAG dot */}
-                  <span className="text-xl leading-none flex-none">{ragDot(r.foodCost.ragStatus)}</span>
-
-                  {/* Main info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-stone-900 dark:text-white leading-snug truncate">
-                      {r.name}
+              {recipes.map((r) => {
+                const darkBg =
+                  r.foodCost.ragStatus === 'green' ? 'dark:bg-green-950/30' :
+                  r.foodCost.ragStatus === 'amber' ? 'dark:bg-amber-950/30' :
+                  'dark:bg-red-950/30';
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => setModal({ type: 'edit', recipe: r })}
+                    className={`w-full rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors active:scale-[0.99] dark:border-gray-700 ${darkBg}`}
+                    style={{ borderLeftWidth: '4px', borderLeftColor: ragLeftBorderColor(r.foodCost.ragStatus) }}
+                  >
+                    {/* Row 1 : Nom + badge food cost */}
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="flex-1 font-semibold leading-snug text-stone-900 dark:text-white">
+                        {r.name}
+                      </p>
+                      <span className={`flex-none rounded-full px-2 py-0.5 text-xs font-semibold ${foodCostBadgeCls(r.foodCost.foodCostPercent)}`}>
+                        {fmt(r.foodCost.foodCostPercent, 1)} %
+                      </span>
+                    </div>
+                    {/* Row 2 : catégorie · ingrédients · prix */}
+                    <p className="mt-1.5 text-xs text-stone-500 dark:text-gray-400">
+                      {[
+                        r.category,
+                        t('recipes.table.ingredientCount', { count: r.items.length }),
+                        `${fmt(Number(r.sellingPrice))} €`,
+                      ].filter(Boolean).join(' · ')}
                     </p>
-                    <p className="mt-0.5 text-xs text-stone-400 dark:text-gray-500 truncate">
-                      {[r.category, t('recipes.table.ingredientCount', { count: r.items.length })].filter(Boolean).join(' · ')}
+                    {/* Row 3 : Profit */}
+                    <p className="mt-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      +{fmt(r.foodCost.profitPerDish)} €{' '}
+                      <span className="text-xs font-normal text-stone-400 dark:text-gray-500">
+                        {t('recipes.mobile.profitPerDish')}
+                      </span>
                     </p>
-                  </div>
-
-                  {/* Price + FC badge */}
-                  <div className="flex-none text-right">
-                    <p className="text-sm font-semibold text-stone-700 dark:text-gray-200">
-                      {fmt(Number(r.sellingPrice))} €
-                    </p>
-                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${foodCostBadgeCls(r.foodCost.foodCostPercent)}`}>
-                      {fmt(r.foodCost.foodCostPercent, 1)} %
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
 
             {/* ── Desktop table ── */}

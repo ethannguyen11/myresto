@@ -221,7 +221,7 @@ export function DashboardLayout() {
             >
               <span className="text-xl leading-none">{icon}</span>
               <span
-                className="text-[10px] font-medium leading-tight"
+                className={`text-[10px] font-medium leading-tight ${active ? '' : 'text-stone-500 dark:text-gray-400'}`}
                 style={{ color: active ? '#16a34a' : undefined }}
               >
                 {label}

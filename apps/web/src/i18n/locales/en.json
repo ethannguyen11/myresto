@@ -245,7 +245,10 @@
     "delete": {
       "message": "Delete recipe {{name}}? This action is irreversible."
     },
-    "loadError": "Unable to load recipes."
+    "loadError": "Unable to load recipes.",
+    "mobile": {
+      "profitPerDish": "margin / dish"
+    }
   },
   "invoices": {
     "title": "Invoices",
