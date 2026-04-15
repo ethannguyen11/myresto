@@ -380,7 +380,7 @@ export function TechSheetPage() {
               <h1 className="text-2xl font-semibold tracking-tight text-stone-900 dark:text-white">
                 {t('techSheets.title')}
               </h1>
-              <p className="mt-1 text-sm text-stone-500">
+              <p className="mt-1 text-sm text-stone-500 dark:text-gray-400">
                 {t(sheets.length === 1 ? 'techSheets.subtitle_one' : 'techSheets.subtitle_other', { count: sheets.length })}
               </p>
             </div>
@@ -500,7 +500,7 @@ export function TechSheetPage() {
               <h1 className="text-2xl font-semibold tracking-tight text-stone-900 dark:text-white">
                 {t('techSheets.step1.title')}
               </h1>
-              <p className="mt-1 text-sm text-stone-500">{t('techSheets.step1.subtitle')}</p>
+              <p className="mt-1 text-sm text-stone-500 dark:text-gray-400">{t('techSheets.step1.subtitle')}</p>
             </div>
             <button onClick={() => setView('list')} className="text-sm text-stone-500 hover:text-stone-700">
               {t('techSheets.backToList')}
@@ -548,7 +548,7 @@ export function TechSheetPage() {
               <h1 className="text-2xl font-semibold tracking-tight text-stone-900 dark:text-white">
                 {t('techSheets.step2.title')}
               </h1>
-              <p className="mt-1 text-sm text-stone-500">{t('techSheets.step2.subtitle')}</p>
+              <p className="mt-1 text-sm text-stone-500 dark:text-gray-400">{t('techSheets.step2.subtitle')}</p>
             </div>
             <button onClick={() => setView('list')} className="text-sm text-stone-500 hover:text-stone-700">
               {t('techSheets.backToList')}

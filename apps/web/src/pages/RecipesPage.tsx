@@ -628,13 +628,170 @@ function SummaryBanner({ recipes }: { recipes: Recipe[] }) {
   );
 }
 
+// ── Recipe mobile bottomsheet ──────────────────────────────────────────────
+
+function RecipeMobileDetailSheet({
+  recipe,
+  onEdit,
+  onClose,
+}: {
+  recipe: Recipe;
+  onEdit: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const fc = recipe.foodCost;
+
+  const itemCosts = recipe.items.map((item) => ({
+    name: item.ingredient.name,
+    unit: item.ingredient.unit,
+    quantity: Number(item.quantity),
+    cost: Number(item.quantity) * Number(item.ingredient.currentPrice),
+  }));
+
+  const hasWastage = fc.ingredientCostWithWaste !== fc.ingredientCost;
+  const wastageCost = fc.ingredientCostWithWaste - fc.ingredientCost;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end md:hidden"
+      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full rounded-t-3xl bg-white shadow-2xl dark:bg-gray-900"
+        style={{ maxHeight: '85dvh', overflowY: 'auto', animation: 'slideUp 0.22s ease-out' }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pb-1 pt-3">
+          <div className="h-1 w-10 rounded-full bg-stone-200 dark:bg-gray-700" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 py-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xl leading-none">{ragDot(fc.ragStatus)}</span>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">{recipe.name}</h2>
+            </div>
+            {recipe.category && (
+              <p className="mt-0.5 text-xs text-stone-400 dark:text-gray-500">{recipe.category}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-stone-400 transition-colors hover:bg-stone-100 dark:text-gray-500 dark:hover:bg-gray-800"
+            aria-label={t('common.cancel')}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 pb-8">
+          {/* Ingredients list */}
+          {itemCosts.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-gray-500">
+                {t('recipes.bottomsheet.ingredients')}
+              </p>
+              <div className="overflow-hidden rounded-xl border border-stone-100 dark:border-gray-700">
+                {itemCosts.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between border-b border-stone-50 px-4 py-2.5 last:border-0 dark:border-gray-700/50"
+                  >
+                    <div>
+                      <span className="text-sm text-stone-800 dark:text-gray-200">{item.name}</span>
+                      <span className="ml-2 text-xs text-stone-400 dark:text-gray-500">
+                        {item.quantity} {item.unit}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-stone-600 dark:text-gray-400">
+                      {fmt(item.cost)} €
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cost breakdown */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-gray-500">
+              {t('recipes.bottomsheet.costs')}
+            </p>
+            <div className="overflow-hidden rounded-xl border border-stone-100 dark:border-gray-700">
+              {[
+                {
+                  label: t('recipes.bottomsheet.ingredientCost'),
+                  value: `${fmt(fc.ingredientCost)} €`,
+                  bold: false, green: false,
+                },
+                ...(hasWastage ? [{
+                  label: t('recipes.bottomsheet.wastage', { pct: fmt(Number(recipe.wastagePercent ?? 0), 1) }),
+                  value: `+${fmt(wastageCost)} €`,
+                  bold: false, green: false,
+                }] : []),
+                {
+                  label: t('recipes.bottomsheet.totalCost'),
+                  value: `${fmt(fc.ingredientCostWithWaste)} €`,
+                  bold: true, green: false,
+                },
+                {
+                  label: t('recipes.bottomsheet.foodCost'),
+                  value: `${fmt(fc.foodCostPercent, 1)} %`,
+                  bold: false, green: false, colored: true,
+                },
+                {
+                  label: t('recipes.bottomsheet.profit'),
+                  value: `+${fmt(fc.profitPerDish)} €`,
+                  bold: true, green: true,
+                },
+              ].map(({ label, value, bold, green, colored }) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between border-b border-stone-50 px-4 py-3 last:border-0 dark:border-gray-700/50"
+                >
+                  <span className={`text-sm ${bold ? 'font-semibold text-stone-900 dark:text-white' : 'text-stone-500 dark:text-gray-400'}`}>
+                    {label}
+                  </span>
+                  <span className={`text-sm font-semibold ${
+                    green ? 'text-emerald-600 dark:text-emerald-400' :
+                    (colored as boolean) ? foodCostTextCls(fc.foodCostPercent) :
+                    bold ? 'text-stone-900 dark:text-white' :
+                    'text-stone-700 dark:text-gray-300'
+                  }`}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edit button */}
+          <button
+            onClick={onEdit}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-[0.98]"
+            style={{ minHeight: '52px' }}
+          >
+            ✏️ {t('recipes.bottomsheet.edit')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 type ActiveModal =
   | { type: 'create' }
   | { type: 'edit'; recipe: Recipe }
   | { type: 'delete'; recipe: Recipe }
-  | { type: 'detail'; recipe: Recipe };
+  | { type: 'detail'; recipe: Recipe }
+  | { type: 'mobile-detail'; recipe: Recipe };
 
 function recipeToForm(r: Recipe): RecipeForm {
   return {
@@ -739,8 +896,8 @@ export function RecipesPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">{t('recipes.title')}</h1>
-            <p className="mt-0.5 text-sm text-stone-500">
+            <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('recipes.title')}</h1>
+            <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
               {t('recipes.subtitle', { count: recipes.length })}
             </p>
           </div>
@@ -781,7 +938,7 @@ export function RecipesPage() {
                 return (
                   <button
                     key={r.id}
-                    onClick={() => setModal({ type: 'edit', recipe: r })}
+                    onClick={() => setModal({ type: 'mobile-detail', recipe: r })}
                     className={`w-full rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors active:scale-[0.99] dark:border-gray-700 ${darkBg}`}
                     style={{ borderLeftWidth: '4px', borderLeftColor: ragLeftBorderColor(r.foodCost.ragStatus) }}
                   >
@@ -930,6 +1087,17 @@ export function RecipesPage() {
       {modal?.type === 'detail' && (
         <CostDetailModal
           recipe={modal.recipe}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {modal?.type === 'mobile-detail' && (
+        <RecipeMobileDetailSheet
+          recipe={modal.recipe}
+          onEdit={() => {
+            const r = modal.recipe;
+            setModal({ type: 'edit', recipe: r });
+          }}
           onClose={() => setModal(null)}
         />
       )}

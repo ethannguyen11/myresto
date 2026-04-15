@@ -26,3 +26,9 @@ textarea {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Bottomsheet slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}

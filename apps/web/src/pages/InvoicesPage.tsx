@@ -565,8 +565,8 @@ export function InvoicesPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">{t('invoices.title')}</h1>
-            <p className="mt-0.5 text-sm text-stone-500">
+            <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('invoices.title')}</h1>
+            <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
               {t('invoices.subtitle', { count: invoices.length })}
               {toReview > 0 && (
                 <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">

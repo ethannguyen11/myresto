@@ -49,7 +49,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
           ? <strong key={j}>{p.slice(2, -2)}</strong>
           : <span key={j}>{p}</span>
       );
-      return <h2 key={i} className="mt-5 text-base font-semibold text-stone-900 first:mt-0">{inner}</h2>;
+      return <h2 key={i} className="mt-5 text-base font-semibold text-stone-900 dark:text-white first:mt-0">{inner}</h2>;
     }
 
     // # h1
@@ -59,7 +59,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
           ? <strong key={j}>{p.slice(2, -2)}</strong>
           : <span key={j}>{p}</span>
       );
-      return <h1 key={i} className="mt-6 text-lg font-bold text-stone-900 first:mt-0">{inner}</h1>;
+      return <h1 key={i} className="mt-6 text-lg font-bold text-stone-900 dark:text-white first:mt-0">{inner}</h1>;
     }
 
     // Numbered list
@@ -521,8 +521,8 @@ export function AdvisorPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-stone-900">{t('advisor.title')}</h1>
-          <p className="mt-0.5 text-sm text-stone-500">
+          <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('advisor.title')}</h1>
+          <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
             {t('advisor.subtitle')}
           </p>
         </div>

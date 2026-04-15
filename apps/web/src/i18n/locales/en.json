@@ -248,6 +248,16 @@
     "loadError": "Unable to load recipes.",
     "mobile": {
       "profitPerDish": "margin / dish"
+    },
+    "bottomsheet": {
+      "ingredients": "Ingredients",
+      "costs": "Cost breakdown",
+      "ingredientCost": "Ingredient cost",
+      "wastage": "Wastage ({{pct}} %)",
+      "totalCost": "Total cost",
+      "foodCost": "Food cost",
+      "profit": "Profit / dish",
+      "edit": "Edit recipe"
     }
   },
   "invoices": {

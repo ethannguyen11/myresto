@@ -244,71 +244,61 @@ function RecipeCarousel({ recipes }: { recipes: RecipeSummary[] }) {
 
   return (
     <div className="md:hidden">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400">
+      <h3 className="mb-3 px-1 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400">
         {t('dashboard.carousel.title')}
-      </h2>
+      </h3>
       <div
-        className="flex overflow-x-auto pb-4"
+        className="flex gap-3 overflow-x-auto pb-4 px-1"
         style={{
           scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
-          gap: '12px',
-          paddingLeft: '4px',
-          paddingRight: '16px',
+          msOverflowStyle: 'none',
         }}
       >
         {recipes.map((r) => {
+          const ragColor =
+            r.ragStatus === 'green' ? 'bg-emerald-500' :
+            r.ragStatus === 'amber' ? 'bg-amber-500' :
+            'bg-red-500';
           const fcColor =
             r.foodCostPercent <= 25 ? 'text-emerald-600 dark:text-emerald-400' :
             r.foodCostPercent <= 35 ? 'text-amber-600 dark:text-amber-400' :
             'text-red-600 dark:text-red-400';
 
           return (
-            <button
+            <div
               key={r.id}
               onClick={() => navigate('/recipes')}
-              className="flex-none rounded-2xl border border-stone-200 bg-white text-left shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              className="cursor-pointer rounded-2xl border border-stone-100 bg-white shadow-sm transition-transform active:scale-95 dark:border-gray-700 dark:bg-gray-800"
               style={{
-                width: '75vw',
+                flex: '0 0 75vw',
                 scrollSnapAlign: 'start',
-                borderTopWidth: '3px',
-                borderTopColor: ragBorderColor(r.ragStatus),
               }}
             >
               <div className="p-4">
-                {/* Name + RAG badge */}
-                <div className="flex items-start justify-between gap-2">
-                  <p className="flex-1 text-sm font-semibold text-stone-900 dark:text-white leading-snug">
-                    {r.name}
-                  </p>
-                  <span className="text-base leading-none">{ragDot(r.foodCostPercent)}</span>
-                </div>
+                {/* Barre top colorée RAG */}
+                <div className={`mb-3 h-1 rounded-full ${ragColor}`} />
 
-                {/* Stats row */}
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-stone-400 dark:text-gray-500">
-                      {t('dashboard.carousel.foodCost')}
-                    </p>
-                    <p className={`mt-0.5 text-lg font-bold ${fcColor}`}>
-                      {fmt(r.foodCostPercent, 1)} %
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-stone-400 dark:text-gray-500">
-                      {t('dashboard.carousel.profit')}
-                    </p>
-                    <p className="mt-0.5 text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                      +{fmt(r.profitPerDish)} €
-                    </p>
-                  </div>
-                </div>
+                {/* Nom */}
+                <p className="mb-1 line-clamp-2 text-sm font-bold leading-snug text-stone-900 dark:text-white">
+                  {r.name}
+                </p>
 
-                {/* Category */}
+                {/* Catégorie */}
                 {r.category && (
-                  <p className="mt-2 text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
+                  <p className="mb-3 text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
                 )}
+
+                {/* Stats */}
+                <div className="flex items-center justify-between">
+                  <span className={`text-xl font-bold ${fcColor}`}>
+                    {fmt(r.foodCostPercent, 1)} %
+                  </span>
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    +{fmt(r.profitPerDish)} €
+                  </span>
+                </div>
 
                 {/* CTA */}
                 <div className="mt-3 border-t border-stone-100 pt-3 dark:border-gray-700">
@@ -317,7 +307,7 @@ function RecipeCarousel({ recipes }: { recipes: RecipeSummary[] }) {
                   </span>
                 </div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

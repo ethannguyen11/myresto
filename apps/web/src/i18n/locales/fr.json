@@ -248,6 +248,16 @@
     "loadError": "Impossible de charger les recettes.",
     "mobile": {
       "profitPerDish": "marge / plat"
+    },
+    "bottomsheet": {
+      "ingredients": "Ingrédients",
+      "costs": "Détail des coûts",
+      "ingredientCost": "Coût ingrédients",
+      "wastage": "Pertes ({{pct}} %)",
+      "totalCost": "Coût total",
+      "foodCost": "Food cost",
+      "profit": "Profit / plat",
+      "edit": "Modifier la recette"
     }
   },
   "invoices": {
