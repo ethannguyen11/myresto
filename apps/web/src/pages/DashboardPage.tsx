@@ -243,69 +243,70 @@ function RecipeCarousel({ recipes }: { recipes: RecipeSummary[] }) {
   if (recipes.length === 0) return null;
 
   return (
-    <div className="md:hidden">
-      <h3 className="mb-3 px-1 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400">
+    <div className="md:hidden" style={{ marginTop: 8 }}>
+      <h3
+        className="text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400"
+        style={{ paddingLeft: 4, marginBottom: 12 }}
+      >
         {t('dashboard.carousel.title')}
       </h3>
+      {/* overflowX scroll + overflowY hidden = horizontal scroll only, no vertical bleed */}
       <div
-        className="flex gap-3 overflow-x-auto pb-4 px-1"
         style={{
-          scrollSnapType: 'x mandatory',
+          display: 'flex',
+          flexDirection: 'row',
+          overflowX: 'scroll',
+          overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
+          scrollSnapType: 'x mandatory',
+          paddingLeft: 4,
+          paddingRight: 16,
+          paddingBottom: 16,
+          gap: 12,
           msOverflowStyle: 'none',
+          scrollbarWidth: 'none',
         }}
       >
         {recipes.map((r) => {
-          const ragColor =
-            r.ragStatus === 'green' ? 'bg-emerald-500' :
-            r.ragStatus === 'amber' ? 'bg-amber-500' :
-            'bg-red-500';
+          const borderTopColor =
+            r.ragStatus === 'green' ? '#16a34a' :
+            r.ragStatus === 'amber' ? '#d97706' : '#dc2626';
           const fcColor =
-            r.foodCostPercent <= 25 ? 'text-emerald-600 dark:text-emerald-400' :
-            r.foodCostPercent <= 35 ? 'text-amber-600 dark:text-amber-400' :
-            'text-red-600 dark:text-red-400';
+            r.ragStatus === 'green' ? '#16a34a' :
+            r.ragStatus === 'amber' ? '#d97706' : '#dc2626';
 
           return (
             <div
               key={r.id}
               onClick={() => navigate('/recipes')}
-              className="cursor-pointer rounded-2xl border border-stone-100 bg-white shadow-sm transition-transform active:scale-95 dark:border-gray-700 dark:bg-gray-800"
               style={{
-                flex: '0 0 75vw',
+                flexShrink: 0,
+                width: '75vw',
                 scrollSnapAlign: 'start',
+                backgroundColor: 'white',
+                borderRadius: 16,
+                padding: 16,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                border: '1px solid rgba(0,0,0,0.06)',
+                borderTop: `4px solid ${borderTopColor}`,
+                cursor: 'pointer',
               }}
             >
-              <div className="p-4">
-                {/* Barre top colorée RAG */}
-                <div className={`mb-3 h-1 rounded-full ${ragColor}`} />
-
-                {/* Nom */}
-                <p className="mb-1 line-clamp-2 text-sm font-bold leading-snug text-stone-900 dark:text-white">
-                  {r.name}
+              <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: '#111827' }}>
+                {r.name}
+              </p>
+              {r.category && (
+                <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                  {r.category}
                 </p>
-
-                {/* Catégorie */}
-                {r.category && (
-                  <p className="mb-3 text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
-                )}
-
-                {/* Stats */}
-                <div className="flex items-center justify-between">
-                  <span className={`text-xl font-bold ${fcColor}`}>
-                    {fmt(r.foodCostPercent, 1)} %
-                  </span>
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    +{fmt(r.profitPerDish)} €
-                  </span>
-                </div>
-
-                {/* CTA */}
-                <div className="mt-3 border-t border-stone-100 pt-3 dark:border-gray-700">
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    {t('dashboard.carousel.viewDetails')} →
-                  </span>
-                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: fcColor }}>
+                  {fmt(r.foodCostPercent, 1)} %
+                </span>
+                <span style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>
+                  +{fmt(r.profitPerDish)} €
+                </span>
               </div>
             </div>
           );

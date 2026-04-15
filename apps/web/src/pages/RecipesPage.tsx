@@ -652,63 +652,91 @@ function RecipeMobileDetailSheet({
   const hasWastage = fc.ingredientCostWithWaste !== fc.ingredientCost;
   const wastageCost = fc.ingredientCostWithWaste - fc.ingredientCost;
 
+  const isDark = document.documentElement.classList.contains('dark');
+  const sheetBg = isDark ? '#111827' : 'white';
+  const borderColor = isDark ? '#374151' : '#f1f5f9';
+  const textPrimary = isDark ? '#f9fafb' : '#111827';
+  const textSecondary = isDark ? '#9ca3af' : '#6b7280';
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:hidden"
-      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <>
+      {/* ── Overlay ── */}
       <div
-        className="w-full rounded-t-3xl bg-white shadow-2xl dark:bg-gray-900"
-        style={{ maxHeight: '85dvh', overflowY: 'auto', animation: 'slideUp 0.22s ease-out' }}
+        style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 9999,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+        }}
+        onClick={onClose}
+      />
+
+      {/* ── Sheet ── */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0, left: 0, right: 0,
+          height: '90vh',
+          zIndex: 10000,
+          borderRadius: '24px 24px 0 0',
+          overflowY: 'auto',
+          backgroundColor: sheetBg,
+          animation: 'slideUp 0.22s ease-out',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pb-1 pt-3">
-          <div className="h-1 w-10 rounded-full bg-stone-200 dark:bg-gray-700" />
-        </div>
+        <div style={{ width: 40, height: 4, backgroundColor: '#d1d5db', borderRadius: 2, margin: '12px auto 8px', flexShrink: 0 }} />
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-5 py-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xl leading-none">{ragDot(fc.ragStatus)}</span>
-              <h2 className="text-lg font-bold text-stone-900 dark:text-white">{recipe.name}</h2>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '0 20px 12px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 20 }}>{ragDot(fc.ragStatus)}</span>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: textPrimary, margin: 0 }}>{recipe.name}</h2>
             </div>
             {recipe.category && (
-              <p className="mt-0.5 text-xs text-stone-400 dark:text-gray-500">{recipe.category}</p>
+              <p style={{ fontSize: 12, color: textSecondary, marginTop: 2, marginLeft: 28 }}>{recipe.category}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-stone-400 transition-colors hover:bg-stone-100 dark:text-gray-500 dark:hover:bg-gray-800"
+            style={{ padding: 8, borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: textSecondary }}
             aria-label={t('common.cancel')}
           >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+            <svg viewBox="0 0 20 20" fill="currentColor" width={20} height={20}>
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
             </svg>
           </button>
         </div>
 
-        <div className="space-y-4 px-5 pb-8">
-          {/* Ingredients list */}
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 8px' }}>
+
+          {/* Ingredients */}
           {itemCosts.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-gray-500">
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: textSecondary, marginBottom: 8 }}>
                 {t('recipes.bottomsheet.ingredients')}
               </p>
-              <div className="overflow-hidden rounded-xl border border-stone-100 dark:border-gray-700">
+              <div style={{ borderRadius: 12, border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
                 {itemCosts.map((item, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between border-b border-stone-50 px-4 py-2.5 last:border-0 dark:border-gray-700/50"
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 16px',
+                      borderBottom: i < itemCosts.length - 1 ? `1px solid ${borderColor}` : 'none',
+                    }}
                   >
                     <div>
-                      <span className="text-sm text-stone-800 dark:text-gray-200">{item.name}</span>
-                      <span className="ml-2 text-xs text-stone-400 dark:text-gray-500">
+                      <span style={{ fontSize: 14, color: textPrimary }}>{item.name}</span>
+                      <span style={{ fontSize: 12, color: textSecondary, marginLeft: 8 }}>
                         {item.quantity} {item.unit}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-stone-600 dark:text-gray-400">
+                    <span style={{ fontSize: 14, fontWeight: 500, color: textSecondary }}>
                       {fmt(item.cost)} €
                     </span>
                   </div>
@@ -718,69 +746,63 @@ function RecipeMobileDetailSheet({
           )}
 
           {/* Cost breakdown */}
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-gray-500">
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: textSecondary, marginBottom: 8 }}>
               {t('recipes.bottomsheet.costs')}
             </p>
-            <div className="overflow-hidden rounded-xl border border-stone-100 dark:border-gray-700">
+            <div style={{ borderRadius: 12, border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
               {[
-                {
-                  label: t('recipes.bottomsheet.ingredientCost'),
-                  value: `${fmt(fc.ingredientCost)} €`,
-                  bold: false, green: false,
-                },
-                ...(hasWastage ? [{
-                  label: t('recipes.bottomsheet.wastage', { pct: fmt(Number(recipe.wastagePercent ?? 0), 1) }),
-                  value: `+${fmt(wastageCost)} €`,
-                  bold: false, green: false,
-                }] : []),
-                {
-                  label: t('recipes.bottomsheet.totalCost'),
-                  value: `${fmt(fc.ingredientCostWithWaste)} €`,
-                  bold: true, green: false,
-                },
-                {
-                  label: t('recipes.bottomsheet.foodCost'),
-                  value: `${fmt(fc.foodCostPercent, 1)} %`,
-                  bold: false, green: false, colored: true,
-                },
-                {
-                  label: t('recipes.bottomsheet.profit'),
-                  value: `+${fmt(fc.profitPerDish)} €`,
-                  bold: true, green: true,
-                },
-              ].map(({ label, value, bold, green, colored }) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between border-b border-stone-50 px-4 py-3 last:border-0 dark:border-gray-700/50"
-                >
-                  <span className={`text-sm ${bold ? 'font-semibold text-stone-900 dark:text-white' : 'text-stone-500 dark:text-gray-400'}`}>
-                    {label}
-                  </span>
-                  <span className={`text-sm font-semibold ${
-                    green ? 'text-emerald-600 dark:text-emerald-400' :
-                    (colored as boolean) ? foodCostTextCls(fc.foodCostPercent) :
-                    bold ? 'text-stone-900 dark:text-white' :
-                    'text-stone-700 dark:text-gray-300'
-                  }`}>
-                    {value}
-                  </span>
-                </div>
-              ))}
+                { label: t('recipes.bottomsheet.ingredientCost'), value: `${fmt(fc.ingredientCost)} €`, type: 'normal' },
+                ...(hasWastage ? [{ label: t('recipes.bottomsheet.wastage', { pct: fmt(Number(recipe.wastagePercent ?? 0), 1) }), value: `+${fmt(wastageCost)} €`, type: 'normal' }] : []),
+                { label: t('recipes.bottomsheet.totalCost'), value: `${fmt(fc.ingredientCostWithWaste)} €`, type: 'bold' },
+                { label: t('recipes.bottomsheet.foodCost'), value: `${fmt(fc.foodCostPercent, 1)} %`, type: 'colored' },
+                { label: t('recipes.bottomsheet.profit'), value: `+${fmt(fc.profitPerDish)} €`, type: 'green' },
+              ].map(({ label, value, type }, i, arr) => {
+                const valueColor =
+                  type === 'green' ? '#16a34a' :
+                  type === 'colored' ? (fc.foodCostPercent <= 25 ? '#16a34a' : fc.foodCostPercent <= 35 ? '#d97706' : '#dc2626') :
+                  type === 'bold' ? textPrimary : textSecondary;
+                return (
+                  <div
+                    key={label}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderBottom: i < arr.length - 1 ? `1px solid ${borderColor}` : 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, color: type === 'bold' ? textPrimary : textSecondary, fontWeight: type === 'bold' ? 600 : 400 }}>
+                      {label}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: type === 'bold' || type === 'green' ? 700 : 500, color: valueColor }}>
+                      {value}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Edit button */}
+        </div>
+
+        {/* Sticky edit button */}
+        <div style={{ position: 'sticky', bottom: 0, padding: 16, backgroundColor: sheetBg, flexShrink: 0 }}>
           <button
             onClick={onEdit}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-[0.98]"
-            style={{ minHeight: '52px' }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '14px 16px',
+              borderRadius: 14, border: 'none',
+              backgroundColor: '#16a34a', color: 'white',
+              fontSize: 15, fontWeight: 600,
+              cursor: 'pointer', minHeight: 52,
+            }}
           >
             ✏️ {t('recipes.bottomsheet.edit')}
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
