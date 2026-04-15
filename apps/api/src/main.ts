@@ -17,7 +17,7 @@ async function bootstrap() {
       'https://chef-ai-tssy.onrender.com',
       'https://chefai-web.vercel.app',
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
