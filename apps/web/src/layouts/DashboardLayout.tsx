@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
@@ -24,11 +24,22 @@ function useDarkMode(): [boolean, () => void] {
   return [dark, () => setDark((d) => !d)];
 }
 
+// ── Bottom navigation items (5 principaux) ────────────────────────────────
+
+const BOTTOM_NAV = [
+  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/recipes', label: 'Recettes', icon: '🥗' },
+  { to: '/ingredients', label: 'Ingrédients', icon: '📦' },
+  { to: '/invoices', label: 'Factures', icon: '📄' },
+  { to: '/advisor', label: 'Conseiller', icon: '🤖' },
+];
+
 // ── Layout ─────────────────────────────────────────────────────────────────
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, toggleDark] = useDarkMode();
   const [alertCount, setAlertCount] = useState(0);
@@ -60,8 +71,13 @@ export function DashboardLayout() {
     setSidebarOpen(false);
   }
 
+  function isBottomNavActive(to: string) {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(to);
+  }
+
   return (
-    <div className="flex h-screen bg-stone-50 dark:bg-gray-950">
+    <div className="flex bg-stone-50 dark:bg-gray-950" style={{ height: '100dvh' }}>
 
       {/* ─── Mobile overlay ─── */}
       {sidebarOpen && (
@@ -79,6 +95,7 @@ export function DashboardLayout() {
           'md:static md:translate-x-0 md:z-auto',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
+        style={{ height: '100dvh' }}
       >
         {/* Brand */}
         <div className="flex h-14 items-center gap-2 border-b border-stone-200 px-6 dark:border-gray-700">
@@ -178,10 +195,41 @@ export function DashboardLayout() {
           </button>
         </div>
 
-        <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-8 sm:py-8">
+        {/* Page content — padding-bottom for bottom nav on mobile */}
+        <div
+          className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-8 sm:py-8"
+          style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+        >
           <Outlet />
         </div>
       </main>
+
+      {/* ─── Bottom Navigation (mobile only) ─── */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-stone-200 bg-white md:hidden dark:border-gray-700 dark:bg-gray-900"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {BOTTOM_NAV.map(({ to, label, icon }) => {
+          const active = isBottomNavActive(to);
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2"
+              style={{ minHeight: '56px' }}
+            >
+              <span className="text-xl leading-none">{icon}</span>
+              <span
+                className="text-[10px] font-medium leading-tight"
+                style={{ color: active ? '#16a34a' : undefined }}
+              >
+                {label}
+              </span>
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 }

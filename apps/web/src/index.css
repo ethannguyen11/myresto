@@ -1,3 +1,28 @@
 @import "tailwindcss";
 @source ".";
 @variant dark (&:where(.dark, .dark *));
+
+/* ── iOS / Safari mobile optimizations ────────────────────────────────────── */
+
+/* Supprime le délai de tap et le highlight sur iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scroll fluide sur iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Évite le zoom automatique sur les inputs (iOS zoome si < 16px) */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Tableaux scrollables horizontalement sur mobile */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
