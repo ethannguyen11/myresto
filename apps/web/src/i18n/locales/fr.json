@@ -100,6 +100,17 @@
       "info": "Alerte hebdomadaire",
       "seeDetails": "Voir les détails →",
       "generatedOn": "Généré le"
+    },
+    "rag": {
+      "profitable": "rentables",
+      "attention": "attention",
+      "danger": "danger"
+    },
+    "carousel": {
+      "title": "Meilleures recettes",
+      "foodCost": "Food cost",
+      "profit": "Profit / plat",
+      "viewDetails": "Voir les recettes"
     }
   },
   "ingredients": {

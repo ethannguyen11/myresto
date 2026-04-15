@@ -60,6 +60,12 @@ function ragDot(pct: number): string {
   return '🔴';
 }
 
+function ragBorderColor(status: 'green' | 'amber' | 'red' | undefined): string {
+  if (status === 'green') return '#16a34a';
+  if (status === 'amber') return '#d97706';
+  return '#dc2626';
+}
+
 const LINE_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444',
   '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
@@ -170,6 +176,155 @@ function KpiCard({ icon, label, value, accent }: { icon: string; label: string; 
   );
 }
 
+// ── RAG compact chips (mobile) ─────────────────────────────────────────────
+
+function RagChips({ summary }: { summary: DashboardData['summary'] }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const amberCount = Math.max(0, summary.totalRecipes - summary.rentableCount - summary.nonRentableCount);
+
+  const chips = [
+    {
+      emoji: '🟢',
+      count: summary.rentableCount,
+      label: t('dashboard.rag.profitable'),
+      border: 'border-emerald-200 dark:border-emerald-800',
+      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      sub: 'text-emerald-600 dark:text-emerald-500',
+    },
+    ...(amberCount > 0 ? [{
+      emoji: '🟡',
+      count: amberCount,
+      label: t('dashboard.rag.attention'),
+      border: 'border-amber-200 dark:border-amber-800',
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      text: 'text-amber-700 dark:text-amber-400',
+      sub: 'text-amber-600 dark:text-amber-500',
+    }] : []),
+    {
+      emoji: '🔴',
+      count: summary.nonRentableCount,
+      label: t('dashboard.rag.danger'),
+      border: 'border-red-200 dark:border-red-800',
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      text: 'text-red-700 dark:text-red-400',
+      sub: 'text-red-600 dark:text-red-500',
+    },
+  ];
+
+  return (
+    <div
+      className="flex gap-3 overflow-x-auto pb-1 md:hidden"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      {chips.map((c) => (
+        <button
+          key={c.label}
+          onClick={() => navigate('/recipes')}
+          className={`flex-none rounded-2xl border px-5 py-4 text-center ${c.border} ${c.bg}`}
+          style={{ minWidth: '100px' }}
+        >
+          <span className="text-2xl leading-none">{c.emoji}</span>
+          <p className={`mt-1 text-2xl font-bold ${c.text}`}>{c.count}</p>
+          <p className={`mt-0.5 text-xs font-medium ${c.sub}`}>{c.label}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Recipe carousel (mobile) ───────────────────────────────────────────────
+
+function RecipeCarousel({ recipes }: { recipes: RecipeSummary[] }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  if (recipes.length === 0) return null;
+
+  return (
+    <div className="md:hidden">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500 dark:text-gray-400">
+        {t('dashboard.carousel.title')}
+      </h2>
+      <div
+        className="flex overflow-x-auto pb-4"
+        style={{
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          gap: '12px',
+          paddingLeft: '4px',
+          paddingRight: '16px',
+        }}
+      >
+        {recipes.map((r) => {
+          const fcColor =
+            r.foodCostPercent <= 25 ? 'text-emerald-600 dark:text-emerald-400' :
+            r.foodCostPercent <= 35 ? 'text-amber-600 dark:text-amber-400' :
+            'text-red-600 dark:text-red-400';
+
+          return (
+            <button
+              key={r.id}
+              onClick={() => navigate('/recipes')}
+              className="flex-none rounded-2xl border border-stone-200 bg-white text-left shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              style={{
+                width: '75vw',
+                scrollSnapAlign: 'start',
+                borderTopWidth: '3px',
+                borderTopColor: ragBorderColor(r.ragStatus),
+              }}
+            >
+              <div className="p-4">
+                {/* Name + RAG badge */}
+                <div className="flex items-start justify-between gap-2">
+                  <p className="flex-1 text-sm font-semibold text-stone-900 dark:text-white leading-snug">
+                    {r.name}
+                  </p>
+                  <span className="text-base leading-none">{ragDot(r.foodCostPercent)}</span>
+                </div>
+
+                {/* Stats row */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-stone-400 dark:text-gray-500">
+                      {t('dashboard.carousel.foodCost')}
+                    </p>
+                    <p className={`mt-0.5 text-lg font-bold ${fcColor}`}>
+                      {fmt(r.foodCostPercent, 1)} %
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-stone-400 dark:text-gray-500">
+                      {t('dashboard.carousel.profit')}
+                    </p>
+                    <p className="mt-0.5 text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                      +{fmt(r.profitPerDish)} €
+                    </p>
+                  </div>
+                </div>
+
+                {/* Category */}
+                {r.category && (
+                  <p className="mt-2 text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
+                )}
+
+                {/* CTA */}
+                <div className="mt-3 border-t border-stone-100 pt-3 dark:border-gray-700">
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {t('dashboard.carousel.viewDetails')} →
+                  </span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
@@ -208,10 +363,9 @@ export function DashboardPage() {
 
   const { summary, priceEvolution } = data;
   const fc = summary.averageFoodCost;
-  const fcColor = fc <= 25 ? 'text-emerald-400' : fc <= 30 ? 'text-amber-400' : 'text-red-400';
   const fcTrend = fc <= 30 ? t('dashboard.hero.belowThreshold') : t('dashboard.hero.aboveThreshold');
 
-  // Build LineChart data: 2 points (start → now) per ingredient
+  // Build LineChart data
   const chartData = priceEvolution.length > 0
     ? [
         {
@@ -234,19 +388,19 @@ export function DashboardPage() {
         <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">{t('dashboard.subtitle')}</p>
       </div>
 
-      {/* Weekly alert banner */}
-      <WeeklyAlertBanner />
+      {/* Weekly alert banner — desktop only */}
+      <div className="hidden md:block">
+        <WeeklyAlertBanner />
+      </div>
 
       {/* ── Hero ── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 p-8 text-white shadow-lg">
-        {/* Decorative circles */}
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-16 right-8 h-64 w-64 rounded-full bg-white/5" />
 
         <div className="relative">
           <p className="text-sm font-medium text-emerald-200">{t('dashboard.hero.label')}</p>
-          <p className={`mt-1 text-6xl font-black tracking-tight ${fcColor.replace('text-', 'text-')}`}
-            style={{ color: 'white', opacity: 1 }}>
+          <p className="mt-1 text-6xl font-black tracking-tight text-white">
             {fmt(fc, 1)} %
           </p>
           <p className="mt-2 text-sm text-emerald-200">{fcTrend}</p>
@@ -265,7 +419,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── KPIs ── */}
+      {/* ── KPIs 2×2 ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
           icon="🍽️"
@@ -292,8 +446,14 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* ── Quick actions ── */}
-      <div>
+      {/* ── RAG chips — mobile only ── */}
+      <RagChips summary={summary} />
+
+      {/* ── Recipe carousel — mobile only ── */}
+      <RecipeCarousel recipes={data.topProfitable} />
+
+      {/* ── Quick actions — desktop only ── */}
+      <div className="hidden md:block">
         <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
           {t('dashboard.actions.title')}
         </h2>
@@ -319,9 +479,9 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Top recettes avec RAG ── */}
+      {/* ── Top recettes avec RAG — desktop only ── */}
       {data.topProfitable.length > 0 && (
-        <div>
+        <div className="hidden md:block">
           <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
             {t('dashboard.tables.topProfitable')}
           </h2>
@@ -353,9 +513,9 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* ── Price evolution LineChart ── */}
+      {/* ── Price evolution LineChart — desktop only ── */}
       {chartData.length > 0 && (
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="hidden md:block rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-5 text-sm font-semibold text-stone-700 dark:text-gray-200">
             {t('dashboard.priceEvolution.title')}
           </h2>

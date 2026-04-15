@@ -763,7 +763,44 @@ export function RecipesPage() {
             </button>
           </div>
         ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+          <>
+            {/* ── Mobile cards ── */}
+            <div className="space-y-3 md:hidden">
+              {recipes.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setModal({ type: 'edit', recipe: r })}
+                  className="flex w-full items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-emerald-300 hover:bg-stone-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-600"
+                  style={{ minHeight: '72px' }}
+                >
+                  {/* RAG dot */}
+                  <span className="text-xl leading-none flex-none">{ragDot(r.foodCost.ragStatus)}</span>
+
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-stone-900 dark:text-white leading-snug truncate">
+                      {r.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-stone-400 dark:text-gray-500 truncate">
+                      {[r.category, t('recipes.table.ingredientCount', { count: r.items.length })].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+
+                  {/* Price + FC badge */}
+                  <div className="flex-none text-right">
+                    <p className="text-sm font-semibold text-stone-700 dark:text-gray-200">
+                      {fmt(Number(r.sellingPrice))} €
+                    </p>
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${foodCostBadgeCls(r.foodCost.foodCostPercent)}`}>
+                      {fmt(r.foodCost.foodCostPercent, 1)} %
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* ── Desktop table ── */}
+          <div className="hidden md:block rounded-xl border border-stone-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -842,6 +879,7 @@ export function RecipesPage() {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
 
