@@ -9,14 +9,7 @@ async function bootstrap() {
     next()
   });
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:8083',
-      'http://localhost:19006',
-      'http://192.168.0.6:8083',
-      'https://chef-ai-tssy.onrender.com',
-      'https://chefai-web.vercel.app',
-    ],
+    origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
