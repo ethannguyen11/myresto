@@ -5,8 +5,6 @@ import {
 } from 'recharts';
 import { api } from '../api/client';
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
 interface FoodCost {
   totalCost: number;
   ingredientCost: number;
@@ -32,22 +30,20 @@ interface Recipe {
 type SortKey = 'name' | 'foodCost' | 'margin' | 'sellingPrice';
 type SortDir = 'asc' | 'desc';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 function fmt(n: number, dec = 2): string {
   return n.toFixed(dec).replace('.', ',');
 }
 
-function foodCostColor(pct: number): string {
-  if (pct <= 25) return 'text-emerald-600 dark:text-emerald-400';
-  if (pct <= 30) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+function ragColor(pct: number): string {
+  if (pct <= 25) return 'var(--green)';
+  if (pct <= 30) return 'var(--amber)';
+  return 'var(--red)';
 }
 
-function foodCostBarColor(pct: number): string {
-  if (pct <= 25) return 'bg-emerald-500';
-  if (pct <= 30) return 'bg-amber-500';
-  return 'bg-red-500';
+function ragBg(pct: number): string {
+  if (pct <= 25) return 'rgba(16,185,129,0.12)';
+  if (pct <= 30) return 'rgba(245,158,11,0.12)';
+  return 'rgba(239,68,68,0.12)';
 }
 
 const PIE_COLORS = [
@@ -56,8 +52,6 @@ const PIE_COLORS = [
 ];
 
 const MEDALS = ['🥇', '🥈', '🥉'];
-
-// ── Page ───────────────────────────────────────────────────────────────────
 
 export function AnalyticsPage() {
   const { t } = useTranslation();
@@ -77,48 +71,44 @@ export function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+      <div className="rounded-xl px-6 py-5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--red)' }}>
         {error}
       </div>
     );
   }
 
-  // Sort
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('desc'); }
   }
 
   const sorted = [...recipes].sort((a, b) => {
-    let va = 0, vb = 0;
     if (sortKey === 'name') return sortDir === 'asc'
       ? a.name.localeCompare(b.name)
       : b.name.localeCompare(a.name);
+    let va = 0, vb = 0;
     if (sortKey === 'foodCost') { va = a.foodCost.foodCostPercent; vb = b.foodCost.foodCostPercent; }
     if (sortKey === 'margin') { va = a.foodCost.profitPerDish; vb = b.foodCost.profitPerDish; }
     if (sortKey === 'sellingPrice') { va = Number(a.sellingPrice); vb = Number(b.sellingPrice); }
     return sortDir === 'asc' ? va - vb : vb - va;
   });
 
-  // Top 3 by margin
   const top3 = [...recipes]
     .sort((a, b) => b.foodCost.profitPerDish - a.foodCost.profitPerDish)
     .slice(0, 3);
 
-  // RAG counts
   const ragGreen = recipes.filter((r) => r.foodCost.ragStatus === 'green').length;
   const ragAmber = recipes.filter((r) => r.foodCost.ragStatus === 'amber').length;
   const ragRed = recipes.filter((r) => r.foodCost.ragStatus === 'red').length;
   const redRecipes = recipes.filter((r) => r.foodCost.ragStatus === 'red');
 
-  // Pie: cost per category
   const catMap: Record<string, number> = {};
   for (const r of recipes) {
     const cat = r.category ?? t('analytics.otherCategory');
@@ -134,57 +124,53 @@ export function AnalyticsPage() {
     : 0;
 
   function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return <span className="text-stone-300 dark:text-gray-600">↕</span>;
-    return <span className="text-emerald-600">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    if (sortKey !== k) return <span style={{ color: 'var(--text-tertiary)' }}>↕</span>;
+    return <span style={{ color: 'var(--accent)' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   }
-
-  const thCls = 'px-4 py-3 text-xs font-medium uppercase tracking-wide text-stone-400 dark:text-gray-500 cursor-pointer select-none hover:text-stone-600 dark:hover:text-gray-300';
 
   return (
     <div className="space-y-8">
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('analytics.title')}</h1>
-        <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
-          {t('analytics.subtitle')}
-        </p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('analytics.title')}</h1>
+        <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{t('analytics.subtitle')}</p>
       </div>
 
-      {/* ── Top 3 podium ── */}
+      {/* Top 3 podium */}
       {top3.length > 0 && (
         <div>
-          <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>
             {t('analytics.topMargins')}
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {top3.map((r, i) => (
               <div
                 key={r.id}
-                className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="rounded-2xl p-5"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
               >
                 <div className="flex items-start justify-between">
                   <span className="text-3xl">{MEDALS[i]}</span>
-                  <span className={`text-lg font-bold ${foodCostColor(r.foodCost.foodCostPercent)}`}>
+                  <span className="text-lg font-bold" style={{ color: ragColor(r.foodCost.foodCostPercent) }}>
                     {fmt(r.foodCost.profitPerDish)} €
                   </span>
                 </div>
-                <p className="mt-3 font-semibold text-stone-800 dark:text-white">{r.name}</p>
+                <p className="mt-3 font-semibold" style={{ color: 'var(--text-primary)' }}>{r.name}</p>
                 {r.category && (
-                  <p className="mt-0.5 text-xs text-stone-400 dark:text-gray-500">{r.category}</p>
+                  <p className="mt-0.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>{r.category}</p>
                 )}
-                {/* Food cost bar */}
                 <div className="mt-4">
-                  <div className="mb-1 flex items-center justify-between text-xs text-stone-400 dark:text-gray-500">
+                  <div className="mb-1 flex items-center justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
                     <span>{t('analytics.foodCostLabel')}</span>
-                    <span className={`font-semibold ${foodCostColor(r.foodCost.foodCostPercent)}`}>
+                    <span className="font-semibold" style={{ color: ragColor(r.foodCost.foodCostPercent) }}>
                       {fmt(r.foodCost.foodCostPercent, 1)} %
                     </span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-stone-100 dark:bg-gray-700">
+                  <div className="h-1.5 w-full rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
                     <div
-                      className={`h-1.5 rounded-full transition-all ${foodCostBarColor(r.foodCost.foodCostPercent)}`}
-                      style={{ width: `${Math.min(r.foodCost.foodCostPercent, 100)}%` }}
+                      className="h-1.5 rounded-full transition-all"
+                      style={{ width: `${Math.min(r.foodCost.foodCostPercent, 100)}%`, background: ragColor(r.foodCost.foodCostPercent) }}
                     />
                   </div>
                 </div>
@@ -194,42 +180,46 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Analyse RAG ── */}
+      {/* RAG analysis */}
       {recipes.length > 0 && (
         <div>
-          <h2 className="mb-4 text-sm font-semibold text-stone-500 uppercase tracking-wide dark:text-gray-400">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>
             {t('analytics.rag.title')}
           </h2>
           <div className="grid grid-cols-3 gap-4 mb-6">
             {[
-              { label: t('analytics.rag.green'), count: ragGreen, cls: 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20', textCls: 'text-emerald-700 dark:text-emerald-300' },
-              { label: t('analytics.rag.amber'), count: ragAmber, cls: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20', textCls: 'text-amber-700 dark:text-amber-300' },
-              { label: t('analytics.rag.red'), count: ragRed, cls: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20', textCls: 'text-red-700 dark:text-red-300' },
-            ].map(({ label, count, cls, textCls }) => (
-              <div key={label} className={`rounded-2xl border p-5 shadow-sm ${cls}`}>
-                <p className={`text-3xl font-bold ${textCls}`}>{count}</p>
-                <p className={`mt-1 text-sm font-medium ${textCls}`}>{label}</p>
+              { label: t('analytics.rag.green'), count: ragGreen, color: 'var(--green)', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.25)' },
+              { label: t('analytics.rag.amber'), count: ragAmber, color: 'var(--amber)', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' },
+              { label: t('analytics.rag.red'), count: ragRed, color: 'var(--red)', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)' },
+            ].map(({ label, count, color, bg, border }) => (
+              <div key={label} className="rounded-2xl p-5" style={{ background: bg, border: `1px solid ${border}` }}>
+                <p className="text-3xl font-bold" style={{ color }}>{count}</p>
+                <p className="mt-1 text-sm font-medium" style={{ color }}>{label}</p>
               </div>
             ))}
           </div>
 
           {redRecipes.length > 0 && (
-            <div className="rounded-2xl border border-red-200 bg-white shadow-sm dark:border-red-800 dark:bg-gray-800">
-              <div className="border-b border-red-100 px-5 py-3 dark:border-red-800">
-                <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">{t('analytics.rag.redTitle')}</h3>
+            <div className="rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--red)' }}>{t('analytics.rag.redTitle')}</h3>
               </div>
-              <div className="divide-y divide-stone-100 dark:divide-gray-700">
-                {redRecipes.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between px-5 py-3">
+              <div>
+                {redRecipes.map((r, i) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between px-5 py-3"
+                    style={{ borderTop: i > 0 ? '1px solid var(--bg-border)' : undefined }}
+                  >
                     <div>
-                      <p className="text-sm font-medium text-stone-800 dark:text-white">{r.name}</p>
-                      <p className="text-xs text-stone-400 dark:text-gray-500">{t('analytics.rag.suggestion')}</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.name}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('analytics.rag.suggestion')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--red)' }}>
                         {fmt(r.foodCost.realCostPercent, 1)} % réel
                       </p>
-                      <p className="text-xs text-stone-400">FC {fmt(r.foodCost.foodCostPercent, 1)} %</p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>FC {fmt(r.foodCost.foodCostPercent, 1)} %</p>
                     </div>
                   </div>
                 ))}
@@ -238,17 +228,16 @@ export function AnalyticsPage() {
           )}
 
           {redRecipes.length === 0 && (
-            <p className="text-sm text-emerald-600 dark:text-emerald-400">{t('analytics.rag.noRed')}</p>
+            <p className="text-sm" style={{ color: 'var(--green)' }}>{t('analytics.rag.noRed')}</p>
           )}
         </div>
       )}
 
-      {/* ── Pie chart + avg FC ── */}
+      {/* Pie chart + summary */}
       {pieData.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Pie chart */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-gray-200">
+          <div className="rounded-2xl p-6" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}>
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
               {t('analytics.pieTitle')}
             </h2>
             <ResponsiveContainer width="100%" height={260}>
@@ -268,40 +257,27 @@ export function AnalyticsPage() {
                 </Pie>
                 <Tooltip
                   formatter={(v: number) => [`${v.toFixed(2)} €`, t('analytics.pieCostLabel')]}
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)', color: 'var(--text-primary)' }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Summary stats */}
-          <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="mb-4 text-sm font-semibold text-stone-700 dark:text-gray-200">
+          <div className="rounded-2xl p-6" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}>
+            <h2 className="mb-4 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
               {t('analytics.summaryTitle')}
             </h2>
             <div className="space-y-4">
               {[
-                { label: t('analytics.summary.avgFoodCost'), value: `${fmt(avgFC, 1)} %`, color: foodCostColor(avgFC) },
-                {
-                  label: t('analytics.summary.profitable'),
-                  value: `${recipes.filter((r) => r.foodCost.isRentable).length} / ${recipes.length}`,
-                  color: 'text-stone-800 dark:text-white',
-                },
-                {
-                  label: t('analytics.summary.totalProfit'),
-                  value: `${fmt(recipes.reduce((s, r) => s + r.foodCost.profitPerDish, 0))} €`,
-                  color: 'text-emerald-600 dark:text-emerald-400',
-                },
-                {
-                  label: t('analytics.summary.nonProfitable'),
-                  value: String(recipes.filter((r) => !r.foodCost.isRentable).length),
-                  color: 'text-red-600 dark:text-red-400',
-                },
+                { label: t('analytics.summary.avgFoodCost'), value: `${fmt(avgFC, 1)} %`, color: ragColor(avgFC) },
+                { label: t('analytics.summary.profitable'), value: `${recipes.filter((r) => r.foodCost.isRentable).length} / ${recipes.length}`, color: 'var(--text-primary)' },
+                { label: t('analytics.summary.totalProfit'), value: `${fmt(recipes.reduce((s, r) => s + r.foodCost.profitPerDish, 0))} €`, color: 'var(--green)' },
+                { label: t('analytics.summary.nonProfitable'), value: String(recipes.filter((r) => !r.foodCost.isRentable).length), color: 'var(--red)' },
               ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between border-b border-stone-100 pb-3 last:border-0 last:pb-0 dark:border-gray-700">
-                  <span className="text-sm text-stone-500 dark:text-gray-400">{label}</span>
-                  <span className={`text-lg font-bold ${color}`}>{value}</span>
+                <div key={label} className="flex items-center justify-between pb-3 last:pb-0" style={{ borderBottom: '1px solid var(--bg-border)' }}>
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  <span className="text-lg font-bold" style={{ color }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -309,64 +285,73 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Full recipe table ── */}
-      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="border-b border-stone-100 px-5 py-4 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-stone-700 dark:text-gray-200">
+      {/* Full recipe table */}
+      <div className="rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--bg-border)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
             {t('analytics.tableTitle')}
-            <span className="ml-2 text-stone-400 dark:text-gray-500 font-normal">({recipes.length})</span>
+            <span className="ml-2 font-normal" style={{ color: 'var(--text-tertiary)' }}>({recipes.length})</span>
           </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100 bg-stone-50 text-left dark:border-gray-700 dark:bg-gray-900/50">
-                <th className={thCls} onClick={() => toggleSort('name')}>
-                  {t('analytics.col.recipe')} <SortIcon k="name" />
-                </th>
-                <th className={`${thCls} hidden sm:table-cell`}>{t('analytics.col.category')}</th>
-                <th className={`${thCls} text-right`} onClick={() => toggleSort('sellingPrice')}>
-                  {t('analytics.col.price')} <SortIcon k="sellingPrice" />
-                </th>
-                <th className={`${thCls} text-right`} onClick={() => toggleSort('foodCost')}>
-                  {t('analytics.col.foodCost')} <SortIcon k="foodCost" />
-                </th>
-                <th className={`${thCls} text-right`} onClick={() => toggleSort('margin')}>
-                  {t('analytics.col.margin')} <SortIcon k="margin" />
-                </th>
-                <th className={`${thCls} hidden md:table-cell`}>{t('analytics.col.fcProgress')}</th>
+              <tr style={{ borderBottom: '1px solid var(--bg-border)', background: 'var(--bg-tertiary)' }}>
+                {[
+                  { key: 'name' as SortKey, label: t('analytics.col.recipe'), align: 'left' },
+                  { key: null, label: t('analytics.col.category'), align: 'left', hidden: 'sm' },
+                  { key: 'sellingPrice' as SortKey, label: t('analytics.col.price'), align: 'right' },
+                  { key: 'foodCost' as SortKey, label: t('analytics.col.foodCost'), align: 'right' },
+                  { key: 'margin' as SortKey, label: t('analytics.col.margin'), align: 'right' },
+                  { key: null, label: t('analytics.col.fcProgress'), align: 'left', hidden: 'md' },
+                ].map(({ key, label, align, hidden }) => (
+                  <th
+                    key={label}
+                    onClick={() => key && toggleSort(key)}
+                    className={`px-4 py-3 text-xs font-medium uppercase tracking-wide select-none${key ? ' cursor-pointer' : ''}${hidden === 'sm' ? ' hidden sm:table-cell' : hidden === 'md' ? ' hidden md:table-cell' : ''}`}
+                    style={{ color: 'var(--text-tertiary)', textAlign: align as 'left' | 'right' }}
+                  >
+                    {label} {key && <SortIcon k={key} />}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-100 dark:divide-gray-700">
-              {sorted.map((r) => (
-                <tr key={r.id} className="hover:bg-stone-50 dark:hover:bg-gray-700/40">
-                  <td className="px-4 py-3 font-medium text-stone-800 dark:text-gray-100">{r.name}</td>
+            <tbody>
+              {sorted.map((r, idx) => (
+                <tr
+                  key={r.id}
+                  style={{ borderTop: idx > 0 ? '1px solid var(--bg-border)' : undefined }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{r.name}</td>
                   <td className="hidden px-4 py-3 sm:table-cell">
                     {r.category ? (
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-gray-700 dark:text-gray-300">
+                      <span className="rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
                         {r.category}
                       </span>
-                    ) : <span className="text-stone-300 dark:text-gray-600">—</span>}
+                    ) : <span style={{ color: 'var(--text-tertiary)' }}>—</span>}
                   </td>
-                  <td className="px-4 py-3 text-right text-stone-600 dark:text-gray-300">
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--text-secondary)' }}>
                     {fmt(Number(r.sellingPrice))} €
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`font-semibold ${foodCostColor(r.foodCost.foodCostPercent)}`}>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ background: ragBg(r.foodCost.foodCostPercent), color: ragColor(r.foodCost.foodCostPercent) }}
+                    >
                       {fmt(r.foodCost.foodCostPercent, 1)} %
                     </span>
                   </td>
-                  <td className={`px-4 py-3 text-right font-semibold ${foodCostColor(r.foodCost.foodCostPercent)}`}>
+                  <td className="px-4 py-3 text-right font-semibold" style={{ color: ragColor(r.foodCost.foodCostPercent) }}>
                     {fmt(r.foodCost.profitPerDish)} €
                   </td>
                   <td className="hidden px-4 py-3 md:table-cell">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full bg-stone-100 dark:bg-gray-700">
-                        <div
-                          className={`h-1.5 rounded-full ${foodCostBarColor(r.foodCost.foodCostPercent)}`}
-                          style={{ width: `${Math.min(r.foodCost.foodCostPercent, 100)}%` }}
-                        />
-                      </div>
+                    <div className="h-1.5 w-full rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${Math.min(r.foodCost.foodCostPercent, 100)}%`, background: ragColor(r.foodCost.foodCostPercent) }}
+                      />
                     </div>
                   </td>
                 </tr>
