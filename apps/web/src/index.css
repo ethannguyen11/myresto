@@ -2,32 +2,66 @@
 @source ".";
 @variant dark (&:where(.dark, .dark *));
 
+/* ── Design System — CSS Variables ────────────────────────────────────────── */
+
+:root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-border: #e2e8f0;
+
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-dark: #d97706;
+  --accent-bg: rgba(245,158,11,0.1);
+
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+}
+
+.dark {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-tertiary: #1a1a24;
+  --bg-border: #2a2a38;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+}
+
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100%;
+}
+
 /* ── iOS / Safari mobile optimizations ────────────────────────────────────── */
 
-/* Supprime le délai de tap et le highlight sur iOS */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Scroll fluide sur iOS */
 html {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Évite le zoom automatique sur les inputs (iOS zoome si < 16px) */
 input,
 select,
 textarea {
   font-size: 16px !important;
 }
 
-/* Tableaux scrollables horizontalement sur mobile */
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Bottomsheet slide-up animation */
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

@@ -4,13 +4,23 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
 
-// ── Dark mode hook ─────────────────────────────────────────────────────────
+// ── Dark mode hook — dark by default ──────────────────────────────────────
 
 function useDarkMode(): [boolean, () => void] {
   const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem('chefai_dark');
-    return saved ? saved === 'true' : false;
+    const saved = localStorage.getItem('theme');
+    return saved ? saved !== 'light' : true;
   });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    }
+  }, []);
 
   useEffect(() => {
     if (dark) {
@@ -18,13 +28,13 @@ function useDarkMode(): [boolean, () => void] {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('chefai_dark', String(dark));
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
   }, [dark]);
 
   return [dark, () => setDark((d) => !d)];
 }
 
-// ── Bottom navigation items (5 principaux) ────────────────────────────────
+// ── Bottom navigation items ────────────────────────────────────────────────
 
 const BOTTOM_NAV = [
   { to: '/', label: 'Dashboard', icon: '📊' },
@@ -67,22 +77,26 @@ export function DashboardLayout() {
     localStorage.setItem('i18n_language', next);
   }
 
-  function closeSidebar() {
-    setSidebarOpen(false);
-  }
+  function closeSidebar() { setSidebarOpen(false); }
 
   function isBottomNavActive(to: string) {
     if (to === '/') return location.pathname === '/';
     return location.pathname.startsWith(to);
   }
 
-  return (
-    <div className="flex bg-stone-50 dark:bg-gray-950" style={{ height: '100dvh' }}>
+  const initials = user?.name
+    ? user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
 
+  return (
+    <div
+      className="flex"
+      style={{ height: '100dvh', background: 'var(--bg-primary)' }}
+    >
       {/* ─── Mobile overlay ─── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 md:hidden"
+          className="fixed inset-0 z-20 bg-black/60 md:hidden"
           onClick={closeSidebar}
         />
       )}
@@ -90,23 +104,31 @@ export function DashboardLayout() {
       {/* ─── Sidebar ─── */}
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-stone-200 bg-white transition-transform duration-200',
-          'dark:bg-gray-900 dark:border-gray-700',
+          'fixed inset-y-0 left-0 z-30 flex w-64 flex-col transition-transform duration-200',
           'md:static md:translate-x-0 md:z-auto',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
-        style={{ height: '100dvh' }}
+        style={{
+          height: '100dvh',
+          background: 'var(--bg-primary)',
+          borderRight: '1px solid var(--bg-border)',
+        }}
       >
         {/* Brand */}
-        <div className="flex h-14 items-center gap-2 border-b border-stone-200 px-6 dark:border-gray-700">
-          <span className="text-2xl">🍳</span>
-          <span className="text-lg font-semibold tracking-tight text-stone-900 dark:text-white">
+        <div
+          className="flex h-14 items-center gap-2.5 px-5"
+          style={{ borderBottom: '1px solid var(--bg-border)' }}
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-lg" style={{ background: 'var(--accent-bg)' }}>
+            🍳
+          </span>
+          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             Chef IA
           </span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
           {NAV_ITEMS.map(({ to, label, icon, badge }) => (
             <NavLink
               key={to}
@@ -115,17 +137,36 @@ export function DashboardLayout() {
               onClick={closeSidebar}
               className={({ isActive }) =>
                 [
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative',
                   isActive
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white',
+                    ? 'border-l-[3px]'
+                    : 'border-l-[3px] border-transparent',
                 ].join(' ')
               }
+              style={({ isActive }) => ({
+                background: isActive ? 'var(--accent-bg)' : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                borderLeftColor: isActive ? 'var(--accent)' : 'transparent',
+              })}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget;
+                if (!el.style.color.includes('var(--accent)')) {
+                  el.style.background = 'var(--bg-tertiary)';
+                  el.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget;
+                if (!el.style.color.includes('var(--accent)')) {
+                  el.style.background = 'transparent';
+                  el.style.color = 'var(--text-secondary)';
+                }
+              }}
             >
-              <span className="text-base">{icon}</span>
+              <span className="text-base leading-none">{icon}</span>
               <span className="flex-1">{label}</span>
               {badge != null && badge > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white" style={{ background: 'var(--red)' }}>
                   {badge}
                 </span>
               )}
@@ -133,36 +174,55 @@ export function DashboardLayout() {
           ))}
         </nav>
 
-        {/* User footer */}
-        <div className="space-y-3 border-t border-stone-200 p-4 dark:border-gray-700">
-          {/* Controls row */}
+        {/* Footer */}
+        <div
+          className="space-y-3 p-4"
+          style={{ borderTop: '1px solid var(--bg-border)' }}
+        >
+          {/* Controls */}
           <div className="flex gap-2">
-            {/* Language switcher */}
             <button
               onClick={toggleLang}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-2 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors"
+              style={{
+                border: '1px solid var(--bg-border)',
+                color: 'var(--text-secondary)',
+                background: 'transparent',
+              }}
             >
               <span>{t('lang.flag')}</span>
               <span>{t('lang.switch')}</span>
             </button>
-            {/* Dark mode toggle */}
             <button
               onClick={toggleDark}
               title={dark ? 'Mode clair' : 'Mode sombre'}
-              className="flex items-center justify-center rounded-lg border border-stone-200 px-3 py-1.5 text-sm transition-colors hover:bg-stone-100 dark:border-gray-600 dark:hover:bg-gray-800"
+              className="flex items-center justify-center rounded-lg px-3 py-1.5 text-sm transition-colors"
+              style={{
+                border: '1px solid var(--bg-border)',
+                color: 'var(--text-secondary)',
+                background: 'transparent',
+              }}
             >
               {dark ? '☀️' : '🌙'}
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-stone-900 dark:text-white">{user?.name}</p>
-              <p className="truncate text-xs text-stone-500 dark:text-gray-400">{user?.email}</p>
+          {/* User info */}
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-xs font-bold text-black"
+              style={{ background: 'var(--accent)' }}
+            >
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
+              <p className="truncate text-xs" style={{ color: 'var(--text-tertiary)' }}>{user?.email}</p>
             </div>
             <button
               onClick={logout}
-              className="rounded-md px-2 py-1 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+              className="rounded-md px-2 py-1 text-xs transition-colors"
+              style={{ color: 'var(--text-tertiary)' }}
             >
               {t('nav.logout')}
             </button>
@@ -174,28 +234,36 @@ export function DashboardLayout() {
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
 
         {/* Mobile top bar */}
-        <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 md:hidden dark:border-gray-700 dark:bg-gray-900">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 text-stone-500 transition-colors hover:bg-stone-100 dark:text-gray-400 dark:hover:bg-gray-800"
-              aria-label="Menu"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <span className="text-base font-semibold text-stone-900 dark:text-white">🍳 Chef IA</span>
-          </div>
+        <div
+          className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between px-4 md:hidden"
+          style={{
+            background: 'var(--bg-primary)',
+            borderBottom: '1px solid var(--bg-border)',
+          }}
+        >
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            aria-label="Menu"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+              <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clipRule="evenodd" />
+            </svg>
+          </button>
+
+          <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>🍳 Chef IA</span>
+
           <button
             onClick={toggleDark}
-            className="rounded-lg p-2 text-stone-500 transition-colors hover:bg-stone-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            className="rounded-lg p-2 transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
           >
             {dark ? '☀️' : '🌙'}
           </button>
         </div>
 
-        {/* Page content — padding-bottom for bottom nav on mobile */}
+        {/* Page content */}
         <div
           className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-8 sm:py-8"
           style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
@@ -206,8 +274,12 @@ export function DashboardLayout() {
 
       {/* ─── Bottom Navigation (mobile only) ─── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-stone-200 bg-white md:hidden dark:border-gray-700 dark:bg-gray-900"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden"
+        style={{
+          background: 'var(--bg-secondary)',
+          borderTop: '1px solid var(--bg-border)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
         {BOTTOM_NAV.map(({ to, label, icon }) => {
           const active = isBottomNavActive(to);
@@ -221,8 +293,8 @@ export function DashboardLayout() {
             >
               <span className="text-xl leading-none">{icon}</span>
               <span
-                className={`text-[10px] font-medium leading-tight ${active ? '' : 'text-stone-500 dark:text-gray-400'}`}
-                style={{ color: active ? '#16a34a' : undefined }}
+                className="text-[10px] font-medium leading-tight"
+                style={{ color: active ? 'var(--accent)' : 'var(--text-tertiary)' }}
               >
                 {label}
               </span>
