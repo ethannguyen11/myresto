@@ -13,6 +13,7 @@ import { AdvisorPage } from './pages/AdvisorPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { TechSheetPage } from './pages/TechSheetPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { path: '/alerts', element: <AlertsPage /> },
           { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/tech-sheets', element: <TechSheetPage /> },
+          { path: '/settings', element: <SettingsPage /> },
         ],
       },
     ],

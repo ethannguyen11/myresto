@@ -20,10 +20,11 @@ model User {
   plan         String    @default("free") // "free" | "pro"
   createdAt    DateTime  @default(now())
 
-  ingredients  Ingredient[]
-  recipes      Recipe[]
-  invoices     Invoice[]
-  techSheets   TechSheet[]
+  ingredients   Ingredient[]
+  recipes       Recipe[]
+  invoices      Invoice[]
+  techSheets    TechSheet[]
+  notifications Notification[]
 }
 
 // ===== INGREDIENTS =====
@@ -160,4 +161,17 @@ model InvoiceMatchMemory {
   confirmedAt  DateTime @default(now())
 
   @@unique([userId, rawName])
+}
+
+// ===== NOTIFICATIONS =====
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // "alert" | "price_increase" | "food_cost" | "weekly"
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

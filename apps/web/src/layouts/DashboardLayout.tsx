@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { NotificationsPanel } from '../components/NotificationsPanel';
 
 // ── Dark mode hook — dark by default ──────────────────────────────────────
 
@@ -53,11 +54,26 @@ export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, toggleDark] = useDarkMode();
   const [alertCount, setAlertCount] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.get<{ alerts: string[] }>('/dashboard')
       .then((r) => setAlertCount(r.data.alerts?.length ?? 0))
       .catch(() => {});
+  }, []);
+
+  // Poll unread notification count every 60s
+  useEffect(() => {
+    function fetchCount() {
+      api.get<{ count: number }>('/notifications/unread-count')
+        .then((r) => setNotifCount(r.data.count))
+        .catch(() => {});
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const NAV_ITEMS = [
@@ -69,6 +85,7 @@ export function DashboardLayout() {
     { to: '/alerts', label: 'Alertes', icon: '🔔', badge: alertCount },
     { to: '/analytics', label: 'Analytiques', icon: '📈' },
     { to: '/tech-sheets', label: t('nav.techSheets'), icon: '📋' },
+    { to: '/settings', label: i18n.language === 'fr' ? 'Paramètres' : 'Settings', icon: '⚙️' },
   ];
 
   function toggleLang() {
@@ -205,6 +222,31 @@ export function DashboardLayout() {
             >
               {dark ? '☀️' : '🌙'}
             </button>
+            {/* Bell — desktop */}
+            <div ref={bellRef} className="relative">
+              <button
+                onClick={() => setNotifOpen((o) => !o)}
+                className="relative flex items-center justify-center rounded-lg px-2.5 py-1.5 text-sm transition-colors"
+                style={{
+                  border: '1px solid var(--bg-border)',
+                  color: 'var(--text-secondary)',
+                  background: 'transparent',
+                }}
+              >
+                🔔
+                {notifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold" style={{ background: '#ef4444', color: '#fff' }}>
+                    {notifCount > 99 ? '99+' : notifCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <NotificationsPanel
+                  onClose={() => setNotifOpen(false)}
+                  onCountChange={setNotifCount}
+                />
+              )}
+            </div>
           </div>
 
           {/* User info */}
@@ -254,13 +296,36 @@ export function DashboardLayout() {
 
           <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>🍳 Chef IA</span>
 
-          <button
-            onClick={toggleDark}
-            className="rounded-lg p-2 transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            {dark ? '☀️' : '🌙'}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleDark}
+              className="rounded-lg p-2 transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {dark ? '☀️' : '🌙'}
+            </button>
+            {/* Bell — mobile */}
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen((o) => !o)}
+                className="relative rounded-lg p-2 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                🔔
+                {notifCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full text-[9px] font-bold" style={{ background: '#ef4444', color: '#fff' }}>
+                    {notifCount > 99 ? '99+' : notifCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <NotificationsPanel
+                  onClose={() => setNotifOpen(false)}
+                  onCountChange={setNotifCount}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Page content */}

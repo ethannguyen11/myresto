@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { RecipesService } from '../recipes/recipes.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class DashboardService {
   constructor(
     private prisma: PrismaService,
     private recipesService: RecipesService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getDashboard(userId: number) {
@@ -80,6 +82,37 @@ export class DashboardService {
           alerts.push(
             `💡 ${r.name} : augmenter le prix de vente de ${increase}€ pour atteindre 30% de food cost`,
           )
+        }
+      }
+    }
+
+    // ── Notifications auto ────────────────────────────────────────────────────
+    // Food cost > 35% → notif "food_cost"
+    for (const r of recipes) {
+      if (r.foodCost.foodCostPercent > 35) {
+        this.notificationsService.upsertToday(
+          userId,
+          'food_cost',
+          `⚠️ Recette non rentable`,
+          `${r.name} a un food cost de ${r.foodCost.foodCostPercent}%`,
+        ).catch(() => {})
+      }
+    }
+    // Hausse de prix > 5% → notif "price_increase"
+    for (const ing of ingredients) {
+      const h = ing.priceHistory
+      if (h.length < 2) continue
+      const prev = Number(h[h.length - 2].price)
+      const last = Number(h[h.length - 1].price)
+      if (last > prev) {
+        const rise = Math.round(((last - prev) / prev) * 100 * 10) / 10
+        if (rise >= 5) {
+          this.notificationsService.upsertToday(
+            userId,
+            'price_increase',
+            `📈 Hausse de prix`,
+            `${ing.name} a augmenté de ${rise}%`,
+          ).catch(() => {})
         }
       }
     }
