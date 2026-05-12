@@ -37,7 +37,7 @@ function useDarkMode(): [boolean, () => void] {
 // ── Bottom navigation items ────────────────────────────────────────────────
 
 const BOTTOM_NAV = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/dashboard', label: 'Dashboard', icon: '📊' },
   { to: '/recipes', label: 'Recettes', icon: '🥗' },
   { to: '/ingredients', label: 'Ingrédients', icon: '📦' },
   { to: '/invoices', label: 'Factures', icon: '📄' },
@@ -61,7 +61,7 @@ export function DashboardLayout() {
   }, []);
 
   const NAV_ITEMS = [
-    { to: '/', label: t('nav.dashboard'), icon: '📊' },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: '📊' },
     { to: '/ingredients', label: t('nav.ingredients'), icon: '🥕' },
     { to: '/recipes', label: t('nav.recipes'), icon: '👨‍🍳' },
     { to: '/invoices', label: t('nav.invoices'), icon: '🧾' },
@@ -80,7 +80,7 @@ export function DashboardLayout() {
   function closeSidebar() { setSidebarOpen(false); }
 
   function isBottomNavActive(to: string) {
-    if (to === '/') return location.pathname === '/';
+    if (to === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(to);
   }
 
@@ -133,7 +133,7 @@ export function DashboardLayout() {
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === '/dashboard'}
               onClick={closeSidebar}
               className={({ isActive }) =>
                 [
@@ -287,7 +287,7 @@ export function DashboardLayout() {
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === '/dashboard'}
               className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2"
               style={{ minHeight: '56px' }}
             >

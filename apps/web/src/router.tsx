@@ -1,7 +1,10 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { DemoPage } from './pages/DemoPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { IngredientsPage } from './pages/IngredientsPage';
 import { RecipesPage } from './pages/RecipesPage';
@@ -12,26 +15,32 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { TechSheetPage } from './pages/TechSheetPage';
 
 export const router = createBrowserRouter([
-  {
-    path: '/login',
-    element: <LoginPage />,
-  },
+  // Public routes
+  { path: '/', element: <LandingPage /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
+  { path: '/demo', element: <DemoPage /> },
+
+  // Protected routes
   {
     element: <ProtectedRoute />,
     children: [
       {
         element: <DashboardLayout />,
         children: [
-          { index: true, element: <DashboardPage /> },
-          { path: 'ingredients', element: <IngredientsPage /> },
-          { path: 'recipes', element: <RecipesPage /> },
-          { path: 'invoices', element: <InvoicesPage /> },
-          { path: 'advisor', element: <AdvisorPage /> },
-          { path: 'alerts', element: <AlertsPage /> },
-          { path: 'analytics', element: <AnalyticsPage /> },
-          { path: 'tech-sheets', element: <TechSheetPage /> },
+          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/ingredients', element: <IngredientsPage /> },
+          { path: '/recipes', element: <RecipesPage /> },
+          { path: '/invoices', element: <InvoicesPage /> },
+          { path: '/advisor', element: <AdvisorPage /> },
+          { path: '/alerts', element: <AlertsPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
+          { path: '/tech-sheets', element: <TechSheetPage /> },
         ],
       },
     ],
   },
+
+  // Fallback
+  { path: '*', element: <Navigate to="/" replace /> },
 ]);
