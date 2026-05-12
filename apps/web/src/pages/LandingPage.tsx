@@ -2,10 +2,72 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
+// ── Theme hook (independent from app theme) ────────────────────────────────
+
+function useLandingTheme(): [boolean, () => void] {
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('landing-theme');
+    return saved === 'dark'; // light by default
+  });
+
+  useEffect(() => {
+    localStorage.setItem('landing-theme', dark ? 'dark' : 'light');
+  }, [dark]);
+
+  return [dark, () => setDark((d) => !d)];
+}
+
+// ── Theme tokens ───────────────────────────────────────────────────────────
+
+function t(dark: boolean) {
+  return {
+    bg: dark ? '#0a0a0f' : '#ffffff',
+    bgAlt: dark ? '#111118' : '#f8fafc',
+    bgCard: dark ? '#111118' : '#ffffff',
+    border: dark ? '#2a2a38' : '#e2e8f0',
+    borderCard: dark ? '#2a2a38' : '#e2e8f0',
+    text: dark ? '#ffffff' : '#0f172a',
+    textSecondary: dark ? '#a1a1aa' : '#64748b',
+    textTertiary: dark ? '#71717a' : '#94a3b8',
+    navBg: (scrolled: boolean) =>
+      scrolled
+        ? dark
+          ? 'rgba(10,10,15,0.92)'
+          : 'rgba(255,255,255,0.92)'
+        : 'transparent',
+    navBorder: (scrolled: boolean) =>
+      scrolled ? (dark ? '#2a2a38' : '#e2e8f0') : 'transparent',
+    shadow: dark ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
+    btnPrimary: { background: '#f59e0b', color: '#000' },
+    btnSecondary: dark
+      ? { border: '1px solid #2a2a38', color: '#ffffff', background: 'transparent' }
+      : { border: '1px solid #0f172a', color: '#0f172a', background: 'transparent' },
+    btnFinalText: dark ? '#fff' : '#000',
+    btnFinalBg: dark ? '#000' : '#0f172a',
+    glow: dark
+      ? 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245,158,11,0.12) 0%, transparent 60%)'
+      : 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245,158,11,0.08) 0%, transparent 60%)',
+    pricingBorder: 'rgba(245,158,11,0.3)',
+    pricingBg: 'rgba(245,158,11,0.04)',
+    mockupBg: dark ? '#111118' : '#f1f5f9',
+    mockupBorder: dark ? '#2a2a38' : '#e2e8f0',
+    mockupChromeBg: dark ? '#0a0a0f' : '#f8fafc',
+    mockupBarBg: dark ? '#1a1a24' : '#e2e8f0',
+    mockupBarColor: dark ? '#71717a' : '#94a3b8',
+    mockupCardBg: dark ? '#111118' : '#ffffff',
+    mockupRowBg: dark ? '#1a1a24' : '#f1f5f9',
+  };
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
 export function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [dark, toggleDark] = useLandingTheme();
+  const th = t(dark);
+
   const demoRef = useRef<HTMLElement>(null);
   const featuresRef = useRef<HTMLElement>(null);
   const pricingRef = useRef<HTMLElement>(null);
@@ -27,36 +89,37 @@ export function LandingPage() {
   if (isLoading) return null;
 
   return (
-    <div style={{ background: '#0a0a0f', minHeight: '100vh', color: '#fff' }}>
+    <div style={{ background: th.bg, minHeight: '100vh', color: th.text, transition: 'background 0.2s, color 0.2s' }}>
 
       {/* ── NAVBAR ── */}
       <header
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(10,10,15,0.92)' : 'transparent',
+          background: th.navBg(scrolled),
           backdropFilter: scrolled ? 'blur(12px)' : 'none',
-          borderBottom: scrolled ? '1px solid #2a2a38' : '1px solid transparent',
+          borderBottom: `1px solid ${th.navBorder(scrolled)}`,
+          boxShadow: scrolled && !dark ? '0 1px 8px rgba(0,0,0,0.06)' : 'none',
         }}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg text-lg" style={{ background: 'rgba(245,158,11,0.15)' }}>🍳</span>
-            <span className="text-base font-bold tracking-tight" style={{ color: '#fff' }}>Chef IA</span>
+            <span className="text-base font-bold tracking-tight" style={{ color: th.text }}>Chef IA</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
             {[
-              { label: 'Fonctionnalités', ref: featuresRef },
-              { label: 'Tarifs', ref: pricingRef },
-              { label: 'Démo', ref: demoRef },
+              { label: 'Features', ref: featuresRef },
+              { label: 'Pricing', ref: pricingRef },
+              { label: 'Demo', ref: demoRef },
             ].map(({ label, ref }) => (
               <button
                 key={label}
                 onClick={() => scrollTo(ref)}
                 className="text-sm font-medium transition-colors"
-                style={{ color: '#a1a1aa' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#a1a1aa')}
+                style={{ color: th.textSecondary }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = th.text)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = th.textSecondary)}
               >
                 {label}
               </button>
@@ -64,19 +127,29 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            <button
+              onClick={toggleDark}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors"
+              style={{ background: th.bgAlt, border: `1px solid ${th.border}`, color: th.textSecondary }}
+              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? '☀️' : '🌙'}
+            </button>
+
             <Link
               to="/login"
               className="hidden sm:block text-sm font-medium transition-colors"
-              style={{ color: '#a1a1aa' }}
+              style={{ color: th.textSecondary }}
             >
-              Se connecter
+              Login
             </Link>
             <Link
               to="/register"
               className="rounded-full px-5 py-2 text-sm font-semibold transition-all"
-              style={{ background: '#f59e0b', color: '#000' }}
+              style={th.btnPrimary}
             >
-              Essayer gratuitement
+              Start for free
             </Link>
           </div>
         </div>
@@ -84,31 +157,25 @@ export function LandingPage() {
 
       {/* ── HERO ── */}
       <section className="relative flex min-h-screen flex-col items-center justify-center px-4 pt-16 text-center">
-        {/* Background glow */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245,158,11,0.12) 0%, transparent 60%)',
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0" style={{ background: th.glow }} />
 
         <div className="relative mx-auto max-w-4xl">
           {/* Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
-            <span>✨</span> Analyse IA des factures fournisseurs
+            <span>✨</span> AI-powered supplier invoice analysis
           </div>
 
           {/* Title */}
-          <h1 className="text-5xl font-bold leading-tight tracking-tight md:text-7xl" style={{ color: '#fff' }}>
-            Sachez enfin si vos plats<br />
-            <span style={{ color: '#f59e0b' }}>vous font gagner</span><br />
-            de l'argent
+          <h1 className="text-5xl font-bold leading-tight tracking-tight md:text-7xl" style={{ color: th.text }}>
+            Finally know if your dishes<br />
+            <span style={{ color: '#f59e0b' }}>are making you</span><br />
+            money
           </h1>
 
           {/* Subtitle */}
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: '#a1a1aa' }}>
-            Chef IA analyse automatiquement vos factures et calcule la rentabilité
-            de chaque plat en temps réel. Fini les tableurs Excel.
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed" style={{ color: th.textSecondary }}>
+            Chef IA automatically analyzes your supplier invoices and calculates
+            the profitability of each dish in real time. No more Excel spreadsheets.
           </p>
 
           {/* CTAs */}
@@ -116,16 +183,16 @@ export function LandingPage() {
             <button
               onClick={() => scrollTo(demoRef)}
               className="rounded-full px-8 py-4 text-base font-semibold transition-all"
-              style={{ background: '#f59e0b', color: '#000' }}
+              style={th.btnPrimary}
             >
-              Voir la démo
+              See the demo
             </button>
             <Link
               to="/register"
               className="rounded-full px-8 py-4 text-base font-semibold transition-all"
-              style={{ border: '1px solid #2a2a38', color: '#fff', background: 'transparent' }}
+              style={th.btnSecondary}
             >
-              Créer mon compte gratuit
+              Create my free account
             </Link>
           </div>
 
@@ -133,42 +200,42 @@ export function LandingPage() {
           <div className="relative mt-20 mx-auto max-w-4xl">
             <div
               className="overflow-hidden rounded-2xl"
-              style={{ border: '1px solid #2a2a38', background: '#111118', boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}
+              style={{ border: `1px solid ${th.mockupBorder}`, background: th.mockupBg, boxShadow: dark ? '0 40px 80px rgba(0,0,0,0.6)' : '0 24px 64px rgba(0,0,0,0.1)' }}
             >
               {/* Browser chrome */}
-              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid #2a2a38', background: '#0a0a0f' }}>
+              <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${th.mockupBorder}`, background: th.mockupChromeBg }}>
                 <span className="h-3 w-3 rounded-full" style={{ background: '#ef4444' }} />
                 <span className="h-3 w-3 rounded-full" style={{ background: '#f59e0b' }} />
                 <span className="h-3 w-3 rounded-full" style={{ background: '#10b981' }} />
-                <div className="mx-auto rounded-md px-4 py-1 text-xs" style={{ background: '#1a1a24', color: '#71717a' }}>
+                <div className="mx-auto rounded-md px-4 py-1 text-xs" style={{ background: th.mockupBarBg, color: th.mockupBarColor }}>
                   app.chefai.fr/dashboard
                 </div>
               </div>
               {/* Dashboard preview */}
-              <div className="p-6" style={{ background: '#0a0a0f' }}>
+              <div className="p-6" style={{ background: th.mockupChromeBg }}>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   {[
-                    { label: 'Food Cost Moyen', value: '27,4 %', color: '#10b981' },
-                    { label: 'Recettes rentables', value: '6 / 8', color: '#f59e0b' },
-                    { label: 'Marge nette estimée', value: '1 240 €', color: '#60a5fa' },
+                    { label: 'Avg Food Cost', value: '27.4 %', color: '#10b981' },
+                    { label: 'Profitable dishes', value: '6 / 8', color: '#f59e0b' },
+                    { label: 'Est. net margin', value: '€1,240', color: '#60a5fa' },
                   ].map((k) => (
-                    <div key={k.label} className="rounded-xl p-4" style={{ background: '#111118', border: '1px solid #2a2a38' }}>
-                      <p className="text-xs mb-1" style={{ color: '#71717a' }}>{k.label}</p>
+                    <div key={k.label} className="rounded-xl p-4" style={{ background: th.mockupCardBg, border: `1px solid ${th.mockupBorder}` }}>
+                      <p className="text-xs mb-1" style={{ color: th.textTertiary }}>{k.label}</p>
                       <p className="text-2xl font-bold" style={{ color: k.color }}>{k.value}</p>
                     </div>
                   ))}
                 </div>
-                <div className="rounded-xl p-4" style={{ background: '#111118', border: '1px solid #2a2a38' }}>
-                  <p className="text-xs mb-3" style={{ color: '#71717a' }}>Analyse des recettes</p>
+                <div className="rounded-xl p-4" style={{ background: th.mockupCardBg, border: `1px solid ${th.mockupBorder}` }}>
+                  <p className="text-xs mb-3" style={{ color: th.textTertiary }}>Recipe analysis</p>
                   <div className="space-y-2">
                     {[
-                      { name: 'Entrecôte frites', fc: 22, color: '#10b981' },
-                      { name: 'Saumon grillé', fc: 28, color: '#f59e0b' },
-                      { name: 'Burger du chef', fc: 38, color: '#ef4444' },
+                      { name: 'Rib steak & fries', fc: 22, color: '#10b981' },
+                      { name: 'Grilled salmon', fc: 28, color: '#f59e0b' },
+                      { name: 'Chef burger', fc: 38, color: '#ef4444' },
                     ].map((r) => (
                       <div key={r.name} className="flex items-center gap-3">
-                        <span className="text-xs w-32 truncate" style={{ color: '#a1a1aa' }}>{r.name}</span>
-                        <div className="flex-1 h-2 rounded-full" style={{ background: '#1a1a24' }}>
+                        <span className="text-xs w-36 truncate text-left" style={{ color: th.textSecondary }}>{r.name}</span>
+                        <div className="flex-1 h-2 rounded-full" style={{ background: th.mockupRowBg }}>
                           <div className="h-2 rounded-full" style={{ width: `${r.fc}%`, background: r.color }} />
                         </div>
                         <span className="text-xs font-semibold w-10 text-right" style={{ color: r.color }}>{r.fc}%</span>
@@ -181,28 +248,28 @@ export function LandingPage() {
             {/* Glow under mockup */}
             <div
               className="pointer-events-none absolute -bottom-10 left-1/2 -translate-x-1/2 h-20 w-3/4 blur-3xl"
-              style={{ background: 'rgba(245,158,11,0.15)' }}
+              style={{ background: 'rgba(245,158,11,0.12)' }}
             />
           </div>
         </div>
       </section>
 
       {/* ── STATS ── */}
-      <section className="py-24 px-4">
+      <section style={{ background: th.bgAlt, borderTop: `1px solid ${th.border}`, borderBottom: `1px solid ${th.border}` }} className="py-20 px-4">
         <div className="mx-auto max-w-4xl">
           <div className="grid grid-cols-1 gap-1 sm:grid-cols-3">
             {[
-              { value: '< 10 min', label: 'Pour voir votre premier food cost' },
-              { value: '30 %', label: 'Le seuil de rentabilité standard' },
-              { value: '100 %', label: 'Automatisé grâce à l\'IA' },
+              { value: '< 10 min', label: 'To see your first food cost' },
+              { value: '30 %', label: 'Standard profitability threshold' },
+              { value: '100 %', label: 'Automated with AI' },
             ].map((s, i) => (
               <div
                 key={s.label}
                 className="flex flex-col items-center py-12 text-center px-8"
-                style={{ borderLeft: i > 0 ? '1px solid #2a2a38' : undefined }}
+                style={{ borderLeft: i > 0 ? `1px solid ${th.border}` : undefined }}
               >
                 <span className="text-5xl font-bold" style={{ color: '#f59e0b' }}>{s.value}</span>
-                <span className="mt-2 text-sm" style={{ color: '#71717a' }}>{s.label}</span>
+                <span className="mt-2 text-sm" style={{ color: th.textTertiary }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -210,46 +277,46 @@ export function LandingPage() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section ref={featuresRef} className="py-24 px-4">
+      <section ref={featuresRef} className="py-24 px-4" style={{ background: th.bg }}>
         <div className="mx-auto max-w-5xl">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl font-bold sm:text-4xl" style={{ color: '#fff' }}>
-              Tout ce dont vous avez besoin
+            <h2 className="text-3xl font-bold sm:text-4xl" style={{ color: th.text }}>
+              Everything you need to stay profitable
             </h2>
-            <p className="mt-3 text-base" style={{ color: '#71717a' }}>
-              Chef IA centralise tout ce qui impacte votre rentabilité.
+            <p className="mt-3 text-base" style={{ color: th.textTertiary }}>
+              Chef IA centralizes everything that impacts your margins.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-3">
             {[
               {
                 icon: '📸',
-                title: 'Scan de factures IA',
-                desc: 'Prenez vos factures en photo. L\'IA lit les prix et met à jour vos coûts automatiquement.',
+                title: 'AI Invoice Scanning',
+                desc: 'Take a photo of your supplier invoices. AI reads the prices and updates your costs automatically.',
               },
               {
                 icon: '📊',
-                title: 'Food cost en temps réel',
-                desc: 'Calculez instantanément la rentabilité de chaque plat avec les vrais prix du marché.',
+                title: 'Real-time Food Cost',
+                desc: 'Instantly calculate the profitability of each dish using current market prices.',
               },
               {
                 icon: '🤖',
-                title: 'Conseiller IA personnalisé',
-                desc: 'Recevez des recommandations concrètes pour optimiser votre carte et augmenter vos marges.',
+                title: 'Personalized AI Advisor',
+                desc: 'Get concrete recommendations to optimize your menu and increase your margins.',
               },
             ].map((f) => (
               <div
                 key={f.title}
                 className="rounded-2xl p-6 transition-all"
-                style={{ background: '#111118', border: '1px solid #2a2a38' }}
+                style={{ background: th.bgCard, border: `1px solid ${th.borderCard}`, boxShadow: th.shadow }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.4)')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#2a2a38')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = th.borderCard)}
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl" style={{ background: 'rgba(245,158,11,0.1)' }}>
                   {f.icon}
                 </div>
-                <h3 className="mb-2 text-base font-semibold" style={{ color: '#fff' }}>{f.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#71717a' }}>{f.desc}</p>
+                <h3 className="mb-2 text-base font-semibold" style={{ color: th.text }}>{f.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: th.textTertiary }}>{f.desc}</p>
               </div>
             ))}
           </div>
@@ -257,51 +324,50 @@ export function LandingPage() {
       </section>
 
       {/* ── DEMO CTA ── */}
-      <section ref={demoRef} className="py-24 px-4">
+      <section ref={demoRef} className="py-24 px-4" style={{ background: th.bgAlt }}>
         <div
           className="mx-auto max-w-3xl rounded-3xl p-12 text-center"
-          style={{ background: '#111118', border: '1px solid #2a2a38' }}
+          style={{ background: th.bgCard, border: `1px solid ${th.borderCard}`, boxShadow: th.shadow }}
         >
           <span className="text-5xl">🚀</span>
-          <h2 className="mt-6 text-3xl font-bold sm:text-4xl" style={{ color: '#fff' }}>
-            Voyez Chef IA en action
+          <h2 className="mt-6 text-3xl font-bold sm:text-4xl" style={{ color: th.text }}>
+            See Chef IA in action
           </h2>
-          <p className="mt-4 text-base" style={{ color: '#a1a1aa' }}>
-            Naviguez dans l'interface avec de vraies données de restaurant.
-            Aucun compte requis.
+          <p className="mt-4 text-base" style={{ color: th.textSecondary }}>
+            Browse the interface with real restaurant data. No account required.
           </p>
           <Link
             to="/demo"
             className="mt-8 inline-flex items-center gap-2 rounded-full px-10 py-4 text-base font-semibold transition-all"
-            style={{ background: '#f59e0b', color: '#000' }}
+            style={th.btnPrimary}
           >
-            🚀 Explorer la démo
+            🚀 Explore the demo
           </Link>
         </div>
       </section>
 
       {/* ── PRICING ── */}
-      <section ref={pricingRef} className="py-24 px-4">
+      <section ref={pricingRef} className="py-24 px-4" style={{ background: th.bg }}>
         <div className="mx-auto max-w-4xl">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl font-bold sm:text-4xl" style={{ color: '#fff' }}>
-              Tarifs simples et transparents
+            <h2 className="text-3xl font-bold sm:text-4xl" style={{ color: th.text }}>
+              Simple, transparent pricing
             </h2>
-            <p className="mt-3 text-base" style={{ color: '#71717a' }}>
-              Commencez gratuitement, évoluez selon vos besoins.
+            <p className="mt-3 text-base" style={{ color: th.textTertiary }}>
+              Start for free, scale as you grow.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2">
             {/* Free */}
-            <div className="rounded-2xl p-8" style={{ background: '#111118', border: '1px solid #2a2a38' }}>
-              <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#71717a' }}>Gratuit</p>
+            <div className="rounded-2xl p-8" style={{ background: th.bgCard, border: `1px solid ${th.borderCard}`, boxShadow: th.shadow }}>
+              <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: th.textTertiary }}>Free</p>
               <div className="mt-4 flex items-end gap-2">
-                <span className="text-5xl font-bold" style={{ color: '#fff' }}>0€</span>
-                <span className="mb-1 text-sm" style={{ color: '#71717a' }}>/mois</span>
+                <span className="text-5xl font-bold" style={{ color: th.text }}>€0</span>
+                <span className="mb-1 text-sm" style={{ color: th.textTertiary }}>/month</span>
               </div>
               <ul className="mt-8 space-y-3">
-                {['3 recettes', '10 ingrédients', '2 scans de factures', 'Dashboard food cost', 'Accès web et mobile'].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm" style={{ color: '#a1a1aa' }}>
+                {['3 recipes', '10 ingredients', '2 invoice scans', 'Food cost dashboard', 'Web & mobile access'].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm" style={{ color: th.textSecondary }}>
                     <span style={{ color: '#10b981' }}>✓</span> {f}
                   </li>
                 ))}
@@ -309,24 +375,24 @@ export function LandingPage() {
               <Link
                 to="/register"
                 className="mt-8 flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-all"
-                style={{ border: '1px solid #2a2a38', color: '#fff', background: 'transparent' }}
+                style={th.btnSecondary}
               >
-                Commencer gratuitement
+                Start for free
               </Link>
             </div>
             {/* Pro */}
-            <div className="relative rounded-2xl p-8" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.3)' }}>
+            <div className="relative rounded-2xl p-8" style={{ background: th.pricingBg, border: `1px solid ${th.pricingBorder}` }}>
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-xs font-semibold" style={{ background: '#f59e0b', color: '#000' }}>
-                Recommandé
+                Recommended
               </div>
               <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#f59e0b' }}>Pro</p>
               <div className="mt-4 flex items-end gap-2">
-                <span className="text-5xl font-bold" style={{ color: '#fff' }}>49€</span>
-                <span className="mb-1 text-sm" style={{ color: '#71717a' }}>/mois</span>
+                <span className="text-5xl font-bold" style={{ color: th.text }}>€49</span>
+                <span className="mb-1 text-sm" style={{ color: th.textTertiary }}>/month</span>
               </div>
               <ul className="mt-8 space-y-3">
-                {['Recettes & ingrédients illimités', 'Scans IA illimités', 'Conseiller IA avancé', 'Rapports PDF', 'Export bon de commande', 'Support prioritaire'].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm" style={{ color: '#a1a1aa' }}>
+                {['Unlimited recipes & ingredients', 'Unlimited AI scans', 'Advanced AI advisor', 'PDF reports', 'Purchase order export', 'Priority support'].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm" style={{ color: th.textSecondary }}>
                     <span style={{ color: '#f59e0b' }}>✓</span> {f}
                   </li>
                 ))}
@@ -334,9 +400,9 @@ export function LandingPage() {
               <Link
                 to="/register"
                 className="mt-8 flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold transition-all"
-                style={{ background: '#f59e0b', color: '#000' }}
+                style={th.btnPrimary}
               >
-                Commencer gratuitement
+                Start for free
               </Link>
             </div>
           </div>
@@ -344,59 +410,59 @@ export function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="py-24 px-4">
+      <section className="py-24 px-4" style={{ background: th.bgAlt }}>
         <div
           className="mx-auto max-w-4xl rounded-3xl p-16 text-center"
           style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
         >
           <h2 className="text-3xl font-bold sm:text-4xl" style={{ color: '#000' }}>
-            Prêt à optimiser votre restaurant ?
+            Ready to optimize your restaurant?
           </h2>
           <p className="mt-4 text-base" style={{ color: 'rgba(0,0,0,0.7)' }}>
-            Rejoignez les restaurateurs qui ont enfin le contrôle sur leurs marges.
+            Join restaurateurs who finally have control over their margins.
           </p>
           <Link
             to="/register"
             className="mt-8 inline-flex items-center gap-2 rounded-full px-10 py-4 text-base font-semibold transition-all"
-            style={{ background: '#000', color: '#fff' }}
+            style={{ background: th.btnFinalBg, color: th.btnFinalText }}
           >
-            Créer mon compte
+            Create my account
           </Link>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t px-4 py-12" style={{ borderColor: '#2a2a38' }}>
+      <footer className="px-4 py-12" style={{ background: th.bg, borderTop: `1px solid ${th.border}` }}>
         <div className="mx-auto max-w-5xl">
           <div className="grid gap-8 sm:grid-cols-3">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg text-base" style={{ background: 'rgba(245,158,11,0.15)' }}>🍳</span>
-                <span className="font-bold" style={{ color: '#fff' }}>Chef IA</span>
+                <span className="font-bold" style={{ color: th.text }}>Chef IA</span>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: '#71717a' }}>
-                La solution de rentabilité pour les restaurants modernes.
+              <p className="text-sm leading-relaxed" style={{ color: th.textTertiary }}>
+                The profitability solution for modern restaurants.
               </p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#71717a' }}>Produit</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: th.textTertiary }}>Product</p>
               <div className="space-y-2">
-                {['Fonctionnalités', 'Tarifs', 'Démo'].map((l) => (
-                  <p key={l} className="text-sm" style={{ color: '#a1a1aa' }}>{l}</p>
+                {['Features', 'Pricing', 'Demo'].map((l) => (
+                  <p key={l} className="text-sm" style={{ color: th.textSecondary }}>{l}</p>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#71717a' }}>Contact</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: th.textTertiary }}>Contact</p>
               <div className="space-y-2">
-                {['Support', 'Partenariats', 'Presse'].map((l) => (
-                  <p key={l} className="text-sm" style={{ color: '#a1a1aa' }}>{l}</p>
+                {['Support', 'Partnerships', 'Press'].map((l) => (
+                  <p key={l} className="text-sm" style={{ color: th.textSecondary }}>{l}</p>
                 ))}
               </div>
             </div>
           </div>
-          <div className="mt-12 pt-8 text-center text-xs" style={{ borderTop: '1px solid #2a2a38', color: '#71717a' }}>
-            © 2026 Chef IA. Tous droits réservés.
+          <div className="mt-12 pt-8 text-center text-xs" style={{ borderTop: `1px solid ${th.border}`, color: th.textTertiary }}>
+            © 2026 Chef IA. All rights reserved.
           </div>
         </div>
       </footer>

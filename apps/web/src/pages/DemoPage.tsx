@@ -376,16 +376,26 @@ export function DemoPage() {
 
       {/* Demo banner */}
       <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-2.5" style={{ background: '#f59e0b' }}>
-        <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#000' }}>
-          <span>👀</span>
-          <span>Mode démo — Données fictives du restaurant "{RESTAURANT}"</span>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="flex items-center gap-1 text-xs font-medium"
+            style={{ color: 'rgba(0,0,0,0.6)' }}
+          >
+            ← Back
+          </Link>
+          <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#000' }}>
+            <span>👀</span>
+            <span className="hidden sm:inline">Demo mode — "{RESTAURANT}" sample data</span>
+            <span className="sm:hidden">Demo mode</span>
+          </div>
         </div>
         <Link
           to="/register"
           className="flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-bold transition-all"
           style={{ background: '#000', color: '#f59e0b' }}
         >
-          Créer mon compte gratuit →
+          Create free account →
         </Link>
       </div>
 
