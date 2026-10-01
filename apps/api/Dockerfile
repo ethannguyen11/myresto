@@ -51,6 +51,10 @@ COPY --from=builder /app/apps/api/dist  ./apps/api/dist
 COPY --from=builder /app/node_modules/.prisma  ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma  ./node_modules/@prisma
 COPY apps/api/prisma ./apps/api/prisma
+# `prisma migrate deploy` lit l'URL de la base dans prisma.config.ts : sans ce
+# fichier, la CLI refuse de démarrer (« datasource.url property is required »).
+# Il est placé à côté de prisma/ pour que « prisma/schema.prisma » se résolve.
+COPY apps/api/prisma.config.ts ./apps/api/
 
 WORKDIR /app/apps/api
 
@@ -61,4 +65,6 @@ EXPOSE 3000
 # et un déploiement pouvait tourner contre un schéma périmé sans rien signaler.
 # `migrate deploy` n'applique que les migrations déjà commitées et ne génère
 # jamais de migration : c'est la commande prévue pour la production.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+# --no-install : utilise la CLI prisma installée (même version que @prisma/client,
+# déclarée dans les dependencies) et échoue plutôt que d'en télécharger une autre.
+CMD ["sh", "-c", "npx --no-install prisma migrate deploy && node dist/src/main"]
