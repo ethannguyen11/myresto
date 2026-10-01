@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name)
   private resend: any = null
 
@@ -19,6 +19,38 @@ export class EmailService {
     }
   }
 
+  /** L'envoi d'emails est-il réellement opérationnel ? */
+  get isConfigured(): boolean {
+    return this.resend !== null
+  }
+
+  /**
+   * Sans cette vérification au démarrage, une absence de RESEND_API_KEY ne se
+   * voyait nulle part : le cron du lundi tournait, n'envoyait rien, et
+   * journalisait un succès. On le dit une fois, fort, au lancement.
+   */
+  onModuleInit() {
+    if (this.isConfigured) {
+      if (!process.env.FRONTEND_URL) {
+        this.logger.warn(
+          'FRONTEND_URL non définie : les liens des emails pointeront vers la valeur ' +
+            'de repli codée en dur, probablement le site d\'un autre déploiement.',
+        )
+      }
+      return
+    }
+
+    const message =
+      'RESEND_API_KEY absente ou invalide : AUCUN email ne partira, y compris le ' +
+      'rapport hebdomadaire du lundi 7 h. Renseignez la variable pour activer l\'envoi.'
+
+    if (process.env.NODE_ENV === 'production') {
+      this.logger.error(message)
+    } else {
+      this.logger.warn(`${message} (normal en développement)`)
+    }
+  }
+
   async sendWeeklyReport(userId: number): Promise<{ sent: boolean; reason?: string }> {
     if (!this.resend) {
       return { sent: false, reason: 'RESEND_API_KEY not configured' }
@@ -28,7 +60,8 @@ export class EmailService {
     if (!user) return { sent: false, reason: 'User not found' }
 
     const recipes = await this.prisma.recipe.findMany({
-      where: { userId },
+      // Seuls les plats à la carte comptent dans le rapport de rentabilité
+      where: { userId, isActive: true },
       include: {
         items: {
           include: { ingredient: true },

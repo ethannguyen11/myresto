@@ -55,4 +55,10 @@ COPY apps/api/prisma ./apps/api/prisma
 WORKDIR /app/apps/api
 
 EXPOSE 3000
-CMD ["node", "dist/src/main"]
+
+# Les migrations sont appliquées au démarrage, avant que le serveur n'écoute.
+# Sans cela, toute nouvelle migration devait être jouée à la main sur la prod,
+# et un déploiement pouvait tourner contre un schéma périmé sans rien signaler.
+# `migrate deploy` n'applique que les migrations déjà commitées et ne génère
+# jamais de migration : c'est la commande prévue pour la production.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

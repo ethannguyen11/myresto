@@ -130,11 +130,54 @@ export class TechSheetsService {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
+  /**
+   * TechSheet.recipeId n'est PAS une clé étrangère dans le schéma Prisma :
+   * c'est un simple entier, sans contrainte d'intégrité ni relation.
+   * Conséquence : rien n'empêche d'y écrire l'identifiant de la recette d'un
+   * autre utilisateur, ce qui ferait fuiter son nom au moment de l'affichage.
+   * On valide donc l'appartenance à la main avant toute écriture.
+   */
+  private async assertRecipeOwned(userId: number, recipeId: number): Promise<void> {
+    const recipe = await this.prisma.recipe.findFirst({
+      where: { id: recipeId, userId },
+      select: { id: true },
+    })
+    if (!recipe) {
+      throw new NotFoundException(`Recette #${recipeId} introuvable`)
+    }
+  }
+
+  /**
+   * Rattache la recette liée. Faute de relation Prisma, la jointure est faite
+   * à la main — et filtrée sur userId, jamais sur le seul recipeId.
+   */
+  private async attachRecipes<T extends { recipeId: number | null }>(
+    userId: number,
+    sheets: T[],
+  ): Promise<(T & { recipe: { id: number; name: string; sellingPrice: unknown } | null })[]> {
+    const ids = [...new Set(sheets.map((s) => s.recipeId).filter((id): id is number => id !== null))]
+
+    const recipes = ids.length
+      ? await this.prisma.recipe.findMany({
+          where: { id: { in: ids }, userId },
+          select: { id: true, name: true, sellingPrice: true },
+        })
+      : []
+
+    const byId = new Map(recipes.map((r) => [r.id, r]))
+
+    return sheets.map((sheet) => ({
+      ...sheet,
+      recipe: sheet.recipeId ? (byId.get(sheet.recipeId) ?? null) : null,
+    }))
+  }
+
   async findAll(userId: number) {
-    return this.prisma.techSheet.findMany({
+    const sheets = await this.prisma.techSheet.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
     })
+    return this.attachRecipes(userId, sheets)
   }
 
   async findOne(id: number, userId: number) {
@@ -142,10 +185,14 @@ export class TechSheetsService {
       where: { id, userId },
     })
     if (!sheet) throw new NotFoundException('Fiche technique introuvable')
-    return sheet
+
+    const [withRecipe] = await this.attachRecipes(userId, [sheet])
+    return withRecipe
   }
 
   async create(userId: number, dto: CreateTechSheetDto) {
+    if (dto.recipeId != null) await this.assertRecipeOwned(userId, dto.recipeId)
+
     return this.prisma.techSheet.create({
       data: {
         userId,
@@ -166,6 +213,8 @@ export class TechSheetsService {
 
   async update(id: number, userId: number, dto: UpdateTechSheetDto) {
     await this.findOne(id, userId)
+    if (dto.recipeId != null) await this.assertRecipeOwned(userId, dto.recipeId)
+
     return this.prisma.techSheet.update({
       where: { id },
       data: {

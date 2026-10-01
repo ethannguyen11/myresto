@@ -58,9 +58,18 @@ export class RecipesService {
     }
   }
 
-  async findAll(userId: number) {
+  /**
+   * @param activeOnly  N'inclut que les plats actuellement à la carte.
+   *
+   * Par défaut on renvoie tout, y compris les plats désactivés : l'écran de
+   * gestion des recettes doit pouvoir les afficher pour les réactiver.
+   * En revanche, tout ce qui juge la rentabilité du menu (analyse, dashboard,
+   * rapport hebdomadaire) doit passer `true` — sinon un plat d'hiver retiré
+   * de la carte continue de peser sur les moyennes et de déclencher des alertes.
+   */
+  async findAll(userId: number, activeOnly = false) {
     const recipes = await this.prisma.recipe.findMany({
-      where: { userId },
+      where: { userId, ...(activeOnly ? { isActive: true } : {}) },
       orderBy: { name: 'asc' },
       include: {
         items: { include: { ingredient: true } },
@@ -137,6 +146,7 @@ export class RecipesService {
         prepTimeMinutes: dto.prepTimeMinutes,
         ...(dto.servings !== undefined && { servings: dto.servings }),
         ...(dto.wastagePercent !== undefined && { wastagePercent: dto.wastagePercent }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.items && {
           items: {
             create: dto.items.map(item => ({
@@ -158,6 +168,28 @@ export class RecipesService {
     }
   }
 
+  /**
+   * Retire un plat de la carte, ou l'y remet.
+   *
+   * C'est l'alternative non destructive à la suppression : l'historique de
+   * coût du plat et ses fiches techniques sont conservés, mais il ne compte
+   * plus dans l'analyse de rentabilité. Pensé pour la saisonnalité.
+   */
+  async setActive(id: number, userId: number, isActive: boolean) {
+    await this.findOne(id, userId)
+
+    const recipe = await this.prisma.recipe.update({
+      where: { id },
+      data: { isActive },
+      include: { items: { include: { ingredient: true } } },
+    })
+
+    return {
+      ...recipe,
+      foodCost: this.calculateFoodCost(recipe.items, recipe.sellingPrice, recipe),
+    }
+  }
+
   async remove(id: number, userId: number) {
     await this.findOne(id, userId)
     await this.prisma.recipeItem.deleteMany({ where: { recipeId: id } })
@@ -165,7 +197,7 @@ export class RecipesService {
   }
 
   async getMenuAnalysis(userId: number) {
-    const recipes = await this.findAll(userId)
+    const recipes = await this.findAll(userId, true)
 
     const analysis = {
       totalRecipes: recipes.length,

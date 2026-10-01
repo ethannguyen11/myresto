@@ -32,27 +32,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { name: '', unit: '', currentPrice: '', category: '' };
 
-// ── Category badge colors + icons ─────────────────────────────────────────
-
-const CATEGORY_COLORS: [string, string, string][] = [
-  ['viande',   'bg-red-50 text-red-700 ring-red-200',              'dark:bg-red-950/50 dark:text-red-300 dark:ring-red-800'],
-  ['poisson',  'bg-blue-50 text-blue-700 ring-blue-200',           'dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-800'],
-  ['légume',   'bg-emerald-50 text-emerald-700 ring-emerald-200',  'dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800'],
-  ['fruit',    'bg-orange-50 text-orange-700 ring-orange-200',     'dark:bg-orange-950/50 dark:text-orange-300 dark:ring-orange-800'],
-  ['épicerie', 'bg-amber-50 text-amber-700 ring-amber-200',        'dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800'],
-  ['laitier',  'bg-sky-50 text-sky-700 ring-sky-200',              'dark:bg-sky-950/50 dark:text-sky-300 dark:ring-sky-800'],
-  ['boisson',  'bg-purple-50 text-purple-700 ring-purple-200',     'dark:bg-purple-950/50 dark:text-purple-300 dark:ring-purple-800'],
-  ['condiment','bg-amber-50 text-amber-700 ring-amber-200',        'dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800'],
-];
-
-function categoryBadge(cat: string | null): string {
-  if (!cat) return 'bg-stone-100 text-stone-500 ring-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700';
-  const key = cat.toLowerCase();
-  const match = CATEGORY_COLORS.find(([k]) => key.includes(k));
-  return match
-    ? `${match[1]} ${match[2]}`
-    : 'bg-stone-100 text-stone-600 ring-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700';
-}
+// ── Category helpers ───────────────────────────────────────────────────────
 
 function categoryIcon(cat: string | null): string {
   if (!cat) return '📦';
@@ -89,28 +69,28 @@ function fmtDateTime(iso: string): string {
 
 // ── Modal shell ────────────────────────────────────────────────────────────
 
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const backdropRef = useRef<HTMLDivElement>(null);
   return (
     <div
       ref={backdropRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ background: 'rgba(0,0,0,0.6)' }}
       onMouseDown={(e) => { if (e.target === backdropRef.current) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
-        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-stone-900 dark:text-white">{title}</h2>
+      <div
+        className="w-full max-w-md rounded-2xl shadow-xl"
+        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
+      >
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: '1px solid var(--bg-border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-gray-800"
+            className="rounded-md p-1 transition-colors"
+            style={{ color: 'var(--text-tertiary)' }}
           >
             ✕
           </button>
@@ -123,11 +103,7 @@ function Modal({
 
 // ── Ingredient form ────────────────────────────────────────────────────────
 
-function IngredientForm({
-  initial,
-  onSave,
-  onCancel,
-}: {
+function IngredientForm({ initial, onSave, onCancel }: {
   initial: FormState;
   onSave: (data: FormState) => Promise<void>;
   onCancel: () => void;
@@ -138,94 +114,69 @@ function IngredientForm({
   const [error, setError] = useState('');
 
   function field(key: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((f) => ({ ...f, [key]: e.target.value }));
+    return (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-    try {
-      await onSave(form);
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? t('common.error'));
-    } finally {
-      setSubmitting(false);
-    }
+    try { await onSave(form); }
+    catch (err: any) { setError(err.response?.data?.message ?? t('common.error')); }
+    finally { setSubmitting(false); }
   }
 
-  const input =
-    'w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 ' +
-    'placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ' +
-    'dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500';
-  const label = 'mb-1.5 block text-xs font-medium text-stone-600 dark:text-gray-400';
+  const inputStyle = {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--bg-border)',
+    color: 'var(--text-primary)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 14,
+    width: '100%',
+    outline: 'none',
+  };
+  const labelStyle = { color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, marginBottom: 6, display: 'block' };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)' }}>
+          {error}
+        </div>
       )}
-
       <div>
-        <label className={label}>{t('ingredients.form.name')}</label>
-        <input
-          className={input}
-          required
-          value={form.name}
-          onChange={field('name')}
-          placeholder={t('ingredients.form.namePlaceholder')}
-        />
+        <label style={labelStyle}>{t('ingredients.form.name')}</label>
+        <input style={inputStyle} required value={form.name} onChange={field('name')} placeholder={t('ingredients.form.namePlaceholder')} />
       </div>
-
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={label}>{t('ingredients.form.unit')}</label>
-          <input
-            className={input}
-            required
-            value={form.unit}
-            onChange={field('unit')}
-            placeholder={t('ingredients.form.unitPlaceholder')}
-          />
+          <label style={labelStyle}>{t('ingredients.form.unit')}</label>
+          <input style={inputStyle} required value={form.unit} onChange={field('unit')} placeholder={t('ingredients.form.unitPlaceholder')} />
         </div>
         <div>
-          <label className={label}>{t('ingredients.form.price')}</label>
-          <input
-            className={input}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.currentPrice}
-            onChange={field('currentPrice')}
-            placeholder={t('ingredients.form.pricePlaceholder')}
-          />
+          <label style={labelStyle}>{t('ingredients.form.price')}</label>
+          <input style={inputStyle} required type="number" min="0" step="0.01" value={form.currentPrice} onChange={field('currentPrice')} placeholder={t('ingredients.form.pricePlaceholder')} />
         </div>
       </div>
-
       <div>
-        <label className={label}>{t('ingredients.form.category')}</label>
-        <input
-          className={input}
-          value={form.category}
-          onChange={field('category')}
-          placeholder={t('ingredients.form.categoryPlaceholder')}
-        />
+        <label style={labelStyle}>{t('ingredients.form.category')}</label>
+        <input style={inputStyle} value={form.category} onChange={field('category')} placeholder={t('ingredients.form.categoryPlaceholder')} />
       </div>
-
       <div className="flex justify-end gap-2 pt-1">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
+          className="rounded-lg px-4 py-2 text-sm transition-colors"
+          style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          style={{ background: 'var(--accent)', color: '#000' }}
         >
           {submitting ? t('common.saving') : t('common.save')}
         </button>
@@ -236,107 +187,73 @@ function IngredientForm({
 
 // ── Price history modal ────────────────────────────────────────────────────
 
-function PriceHistoryModal({
-  ingredient,
-  onClose,
-}: {
-  ingredient: Ingredient;
-  onClose: () => void;
-}) {
+function PriceHistoryModal({ ingredient, onClose }: { ingredient: Ingredient; onClose: () => void }) {
   const { t } = useTranslation();
   const [history, setHistory] = useState<PriceHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get<PriceHistory[]>(`/ingredients/${ingredient.id}/price-history`)
+    api.get<PriceHistory[]>(`/ingredients/${ingredient.id}/price-history`)
       .then((res) => setHistory(res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [ingredient.id]);
 
-  // Chronological for sparkline
   const chrono = [...history].reverse();
   const prices = chrono.map((h) => Number(h.price));
-  const W = 300;
-  const H = 60;
-  const pad = 6;
-  const minP = Math.min(...prices);
-  const maxP = Math.max(...prices);
-  const rangeP = maxP - minP || 1;
+  const W = 300, H = 60, pad = 6;
+  const minP = Math.min(...prices), maxP = Math.max(...prices), rangeP = maxP - minP || 1;
 
-  const svgPoints = prices
-    .map((p, i) => {
-      const x = pad + (i / Math.max(prices.length - 1, 1)) * (W - pad * 2);
-      const y = pad + ((maxP - p) / rangeP) * (H - pad * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+  const svgPoints = prices.map((p, i) => {
+    const x = pad + (i / Math.max(prices.length - 1, 1)) * (W - pad * 2);
+    const y = pad + ((maxP - p) / rangeP) * (H - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
 
   return (
     <Modal title={t('ingredients.history.title', { name: ingredient.name })} onClose={onClose}>
       {loading ? (
         <div className="flex h-24 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
         </div>
       ) : history.length === 0 ? (
-        <p className="py-8 text-center text-sm text-stone-400">{t('ingredients.history.empty')}</p>
+        <p className="py-8 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>{t('ingredients.history.empty')}</p>
       ) : (
         <div className="space-y-4">
-          {/* Sparkline */}
           {prices.length > 1 && (
-            <div className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-3">
-              <p className="mb-2 text-xs font-medium text-stone-400">
+            <div className="rounded-xl p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
+              <p className="mb-2 text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
                 {t('ingredients.history.chartLabel', { unit: ingredient.unit })}
               </p>
-              <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-emerald-500">
-                <polyline
-                  points={svgPoints}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
+              <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ color: 'var(--accent)' }}>
+                <polyline points={svgPoints} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                 {chrono.map((_, i) => {
                   const parts = svgPoints.split(' ')[i]?.split(',') ?? [];
-                  return (
-                    <circle
-                      key={i}
-                      cx={parts[0]}
-                      cy={parts[1]}
-                      r="3"
-                      fill="currentColor"
-                    />
-                  );
+                  return <circle key={i} cx={parts[0]} cy={parts[1]} r="3" fill="currentColor" />;
                 })}
               </svg>
-              <div className="mt-1 flex justify-between text-xs text-stone-400">
+              <div className="mt-1 flex justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 <span>{fmt(minP)} €</span>
                 <span>{fmt(maxP)} €</span>
               </div>
             </div>
           )}
-
-          {/* Chronological list */}
-          <ul className="max-h-56 divide-y divide-stone-100 overflow-y-auto rounded-xl border border-stone-100">
+          <ul className="max-h-56 divide-y overflow-y-auto rounded-xl" style={{ borderColor: 'var(--bg-border)', border: '1px solid var(--bg-border)' }}>
             {history.map((h) => (
-              <li key={h.id} className="flex items-center justify-between px-4 py-2.5">
+              <li key={h.id} className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid var(--bg-border)' }}>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-stone-800">
-                    {fmt(Number(h.price))} €
-                  </span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{fmt(Number(h.price))} €</span>
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                      h.source === 'invoice'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'bg-stone-100 text-stone-500'
-                    }`}
+                    className="rounded-full px-1.5 py-0.5 text-xs font-medium"
+                    style={{
+                      background: h.source === 'invoice' ? 'rgba(59,130,246,0.15)' : 'var(--bg-tertiary)',
+                      color: h.source === 'invoice' ? '#60a5fa' : 'var(--text-secondary)',
+                    }}
                   >
                     {h.source === 'invoice' ? t('ingredients.history.invoice') : t('ingredients.history.manual')}
                   </span>
                 </div>
-                <span className="text-xs text-stone-400">{fmtDateTime(h.recordedAt)}</span>
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{fmtDateTime(h.recordedAt)}</span>
               </li>
             ))}
           </ul>
@@ -348,11 +265,7 @@ function PriceHistoryModal({
 
 // ── Delete confirm modal ───────────────────────────────────────────────────
 
-function DeleteModal({
-  ingredient,
-  onConfirm,
-  onCancel,
-}: {
+function DeleteModal({ ingredient, onConfirm, onCancel }: {
   ingredient: Ingredient;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
@@ -362,29 +275,27 @@ function DeleteModal({
 
   async function handleConfirm() {
     setLoading(true);
-    try {
-      await onConfirm();
-    } finally {
-      setLoading(false);
-    }
+    try { await onConfirm(); } finally { setLoading(false); }
   }
 
   return (
     <Modal title={t('common.confirmDelete')} onClose={onCancel}>
-      <p className="text-sm text-stone-600">
+      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         {t('ingredients.delete.message', { name: ingredient.name })}
       </p>
       <div className="mt-5 flex justify-end gap-2">
         <button
           onClick={onCancel}
-          className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
+          className="rounded-lg px-4 py-2 text-sm transition-colors"
+          style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}
         >
           {t('common.cancel')}
         </button>
         <button
           onClick={handleConfirm}
           disabled={loading}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+          className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          style={{ background: 'var(--red)', color: '#fff' }}
         >
           {loading ? t('common.deleting') : t('common.deleteForever')}
         </button>
@@ -397,7 +308,6 @@ function DeleteModal({
 
 type IngSortKey = 'name' | 'price' | 'updatedAt';
 type SortDir    = 'asc' | 'desc';
-
 const ING_CATEGORIES = ['all', 'viande', 'poisson', 'légume', 'laitier', 'épicerie', 'condiment', 'fruit', 'autre'] as const;
 type IngCategory = typeof ING_CATEGORIES[number];
 const KNOWN_CATS = ['viande', 'poisson', 'légume', 'laitier', 'épicerie', 'condiment', 'fruit', 'boisson'];
@@ -418,8 +328,6 @@ export function IngredientsPage() {
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const [showOrderSheet, setShowOrderSheet] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-
-  // ── Filter & sort state ──
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState<IngCategory>('all');
   const [sortKey, setSortKey] = useState<IngSortKey>('name');
@@ -435,7 +343,6 @@ export function IngredientsPage() {
       const res = await api.get<Ingredient[]>('/ingredients');
       setIngredients(res.data);
     } catch (err: any) {
-      console.error('[IngredientsPage] GET /ingredients', err);
       setError(err.response?.data?.message ?? t('ingredients.loadError'));
     } finally {
       setLoading(false);
@@ -445,23 +352,13 @@ export function IngredientsPage() {
   useEffect(() => { load(); }, []);
 
   async function handleCreate(form: FormState) {
-    await api.post('/ingredients', {
-      name: form.name,
-      unit: form.unit,
-      currentPrice: parseFloat(form.currentPrice),
-      category: form.category || undefined,
-    });
+    await api.post('/ingredients', { name: form.name, unit: form.unit, currentPrice: parseFloat(form.currentPrice), category: form.category || undefined });
     setModal(null);
     await load();
   }
 
   async function handleEdit(ingredient: Ingredient, form: FormState) {
-    await api.put(`/ingredients/${ingredient.id}`, {
-      name: form.name,
-      unit: form.unit,
-      currentPrice: parseFloat(form.currentPrice),
-      category: form.category || undefined,
-    });
+    await api.put(`/ingredients/${ingredient.id}`, { name: form.name, unit: form.unit, currentPrice: parseFloat(form.currentPrice), category: form.category || undefined });
     setModal(null);
     await load();
   }
@@ -475,20 +372,19 @@ export function IngredientsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700">
+      <div className="rounded-xl px-6 py-5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}>
         {error}
       </div>
     );
   }
 
-  // ── Filtered + sorted list ──
   let displayed = ingredients;
   if (search.trim()) {
     const q = search.toLowerCase();
@@ -512,7 +408,15 @@ export function IngredientsPage() {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  const inputCls = 'rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white';
+  const inputStyle = {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--bg-border)',
+    color: 'var(--text-primary)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 14,
+    outline: 'none',
+  };
 
   return (
     <>
@@ -521,27 +425,30 @@ export function IngredientsPage() {
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('ingredients.title')}</h1>
-            <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('ingredients.title')}</h1>
+            <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
               {t('ingredients.subtitle', { count: ingredients.length })}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setShowLibrary(true)}
-              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+              style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)', background: 'transparent' }}
             >
               📚 {t('library.button')}
             </button>
             <button
               onClick={() => setShowOrderSheet(true)}
-              className="flex items-center gap-2 rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+              style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)', background: 'transparent' }}
             >
               🖨️ {t('orderSheet.button')}
             </button>
             <button
               onClick={() => setModal({ type: 'create' })}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium"
+              style={{ background: 'var(--accent)', color: '#000' }}
             >
               <span className="text-base leading-none">+</span>
               {t('ingredients.add')}
@@ -549,37 +456,33 @@ export function IngredientsPage() {
           </div>
         </div>
 
-        {/* ── Filter bar ── */}
+        {/* Filter bar */}
         {ingredients.length > 0 && (
-          <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            {/* Row 1: search + category */}
+          <div
+            className="flex flex-col gap-3 rounded-xl p-4"
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
+          >
             <div className="flex flex-wrap gap-3">
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('ingredients.filters.searchPlaceholder')}
-                className={`flex-1 min-w-[180px] ${inputCls}`}
+                className="flex-1 min-w-[180px]"
+                style={{ ...inputStyle }}
               />
               <select
                 value={catFilter}
                 onChange={(e) => setCatFilter(e.target.value as IngCategory)}
-                className={inputCls}
+                style={{ ...inputStyle }}
               >
                 <option value="all">{t('ingredients.filters.allCategories')}</option>
                 {ING_CATEGORIES.filter((c) => c !== 'all').map((cat) => (
-                  <option key={cat} value={cat}>
-                    {t(`ingredients.filters.categories.${cat}`)}
-                  </option>
+                  <option key={cat} value={cat}>{t(`ingredients.filters.categories.${cat}`)}</option>
                 ))}
               </select>
             </div>
-
-            {/* Row 2: sort buttons + counter */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-stone-400 dark:text-gray-500 mr-1">
-                {t('ingredients.filters.sort.name')}
-              </span>
               {(['name', 'price', 'updatedAt'] as IngSortKey[]).map((key) => {
                 const labels: Record<IngSortKey, string> = {
                   name: t('ingredients.filters.sort.name'),
@@ -591,140 +494,166 @@ export function IngredientsPage() {
                   <button
                     key={key}
                     onClick={() => toggleSort(key)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                      active
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
+                    className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                    style={{
+                      background: active ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: active ? '#000' : 'var(--text-secondary)',
+                    }}
                   >
                     {labels[key]} {active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                   </button>
                 );
               })}
-              <span className="ml-auto text-xs text-stone-400 dark:text-gray-500">
+              <span className="ml-auto text-xs" style={{ color: 'var(--text-tertiary)' }}>
                 {t('ingredients.filters.displayed', { count: displayed.length })}
               </span>
             </div>
           </div>
         )}
 
-        {/* Empty state — no ingredients at all */}
+        {/* Empty states */}
         {ingredients.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div
+            className="flex flex-col items-center justify-center rounded-xl border-dashed py-16 text-center"
+            style={{ border: '2px dashed var(--bg-border)', background: 'var(--bg-secondary)' }}
+          >
             <span className="text-4xl">🥕</span>
-            <p className="mt-3 text-sm font-medium text-stone-700 dark:text-gray-200">{t('ingredients.empty.title')}</p>
-            <p className="mt-1 text-xs text-stone-400 dark:text-gray-500">{t('ingredients.empty.desc')}</p>
+            <p className="mt-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t('ingredients.empty.title')}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('ingredients.empty.desc')}</p>
             <button
               onClick={() => setModal({ type: 'create' })}
-              className="mt-4 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
+              className="mt-4 rounded-lg px-4 py-2 text-sm transition-colors"
+              style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}
             >
               {t('ingredients.add')}
             </button>
           </div>
         ) : displayed.length === 0 ? (
-          /* No results for active filters */
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div
+            className="flex flex-col items-center gap-2 rounded-xl border-dashed py-12 text-center"
+            style={{ border: '2px dashed var(--bg-border)', background: 'var(--bg-secondary)' }}
+          >
             <span className="text-3xl">🔍</span>
-            <p className="text-sm text-stone-500 dark:text-gray-400">{t('ingredients.filters.noResults')}</p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t('ingredients.filters.noResults')}</p>
           </div>
         ) : (
           <>
-            {/* ── Mobile cards ── */}
+            {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
               {displayed.map((ing) => (
                 <button
                   key={ing.id}
                   onClick={() => setModal({ type: 'edit', ingredient: ing })}
-                  className="flex w-full items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-colors active:scale-[0.99] dark:border-gray-700 dark:bg-gray-800"
-                  style={{ minHeight: '72px' }}
+                  className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors active:scale-[0.99]"
+                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)', minHeight: '72px' }}
                 >
-                  {/* Category icon */}
-                  <span className="flex-none text-2xl leading-none">{categoryIcon(ing.category)}</span>
-
-                  {/* Name + badge */}
+                  <span
+                    className="flex-none flex h-10 w-10 items-center justify-center rounded-xl text-xl"
+                    style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}
+                  >
+                    {categoryIcon(ing.category)}
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-stone-900 dark:text-white">{ing.name}</p>
+                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{ing.name}</p>
                     {ing.category ? (
-                      <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${categoryBadge(ing.category)}`}>
+                      <span
+                        className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                      >
                         {ing.category}
                       </span>
                     ) : (
-                      <span className="mt-1 text-xs text-stone-400 dark:text-gray-500">
-                        {t('ingredients.table.name')}
-                      </span>
+                      <span className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('ingredients.table.name')}</span>
                     )}
                   </div>
-
-                  {/* Price + unit */}
                   <div className="flex-none text-right">
-                    <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                    <p className="text-base font-bold" style={{ color: 'var(--accent)' }}>
                       {fmt(Number(ing.currentPrice))} €
                     </p>
-                    <p className="text-xs text-stone-400 dark:text-gray-500">/{ing.unit}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>/{ing.unit}</p>
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* ── Desktop table ── */}
-            <div className="hidden md:block rounded-xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            {/* Desktop table */}
+            <div
+              className="hidden md:block rounded-xl"
+              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
+            >
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-500">
-                      <th className="px-5 py-3">{t('ingredients.table.name')}</th>
-                      <th className="px-5 py-3">{t('ingredients.table.category')}</th>
-                      <th className="px-5 py-3">{t('ingredients.table.unit')}</th>
-                      <th className="px-5 py-3 text-right">{t('ingredients.table.currentPrice')}</th>
-                      <th className="px-5 py-3 text-right">{t('ingredients.table.updatedAt')}</th>
-                      <th className="px-5 py-3" />
+                    <tr style={{ borderBottom: '1px solid var(--bg-border)' }}>
+                      {[t('ingredients.table.name'), t('ingredients.table.category'), t('ingredients.table.unit'), t('ingredients.table.currentPrice'), t('ingredients.table.updatedAt'), ''].map((h, i) => (
+                        <th
+                          key={i}
+                          className={`px-5 py-3 text-xs font-medium uppercase tracking-wide text-left${i === 3 || i === 4 ? ' text-right' : ''}`}
+                          style={{ color: 'var(--text-tertiary)', background: 'var(--bg-secondary)' }}
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-100 dark:divide-gray-700">
+                  <tbody>
                     {displayed.map((ing) => (
-                      <tr key={ing.id} className="group hover:bg-stone-50 dark:hover:bg-gray-700/40">
+                      <tr
+                        key={ing.id}
+                        className="group transition-colors"
+                        style={{ borderBottom: '1px solid var(--bg-border)' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                      >
                         <td className="px-5 py-3">
                           <button
                             onClick={() => setModal({ type: 'history', ingredient: ing })}
-                            className="font-medium text-stone-800 underline-offset-2 hover:text-emerald-600 hover:underline dark:text-gray-100"
+                            className="font-medium underline-offset-2 hover:underline"
+                            style={{ color: 'var(--text-primary)' }}
                           >
                             {ing.name}
                           </button>
                         </td>
                         <td className="px-5 py-3">
                           {ing.category ? (
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${categoryBadge(ing.category)}`}>
+                            <span
+                              className="rounded-full px-2 py-0.5 text-xs font-medium"
+                              style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+                            >
                               {ing.category}
                             </span>
                           ) : (
-                            <span className="text-stone-300 dark:text-gray-600">—</span>
+                            <span style={{ color: 'var(--bg-border)' }}>—</span>
                           )}
                         </td>
-                        <td className="px-5 py-3 text-stone-500 dark:text-gray-400">{ing.unit}</td>
-                        <td className="px-5 py-3 text-right font-semibold text-stone-800 dark:text-gray-100">
+                        <td className="px-5 py-3" style={{ color: 'var(--text-secondary)' }}>{ing.unit}</td>
+                        <td className="px-5 py-3 text-right font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {fmt(Number(ing.currentPrice))} €
                         </td>
-                        <td className="px-5 py-3 text-right text-xs text-stone-400 dark:text-gray-500">
+                        <td className="px-5 py-3 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
                           {fmtDate(ing.updatedAt)}
                         </td>
                         <td className="px-5 py-3">
-                          <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setModal({ type: 'history', ingredient: ing })}
                               title={t('ingredients.history.title', { name: ing.name })}
-                              className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-gray-700"
+                              className="rounded-md p-1.5 transition-colors"
+                              style={{ color: 'var(--text-tertiary)' }}
                             >
                               📈
                             </button>
                             <button
                               onClick={() => setModal({ type: 'edit', ingredient: ing })}
-                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                              className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+                              style={{ color: 'var(--text-secondary)' }}
                             >
                               {t('common.edit')}
                             </button>
                             <button
                               onClick={() => setModal({ type: 'delete', ingredient: ing })}
-                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+                              className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+                              style={{ color: 'var(--red)' }}
                             >
                               {t('common.delete')}
                             </button>
@@ -740,60 +669,29 @@ export function IngredientsPage() {
         )}
       </div>
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       {modal?.type === 'create' && (
         <Modal title={t('ingredients.form.addTitle')} onClose={() => setModal(null)}>
-          <IngredientForm
-            initial={EMPTY_FORM}
-            onSave={handleCreate}
-            onCancel={() => setModal(null)}
-          />
+          <IngredientForm initial={EMPTY_FORM} onSave={handleCreate} onCancel={() => setModal(null)} />
         </Modal>
       )}
-
       {modal?.type === 'edit' && (
-        <Modal
-          title={t('ingredients.form.editTitle', { name: modal.ingredient.name })}
-          onClose={() => setModal(null)}
-        >
+        <Modal title={t('ingredients.form.editTitle', { name: modal.ingredient.name })} onClose={() => setModal(null)}>
           <IngredientForm
-            initial={{
-              name: modal.ingredient.name,
-              unit: modal.ingredient.unit,
-              currentPrice: String(Number(modal.ingredient.currentPrice)),
-              category: modal.ingredient.category ?? '',
-            }}
+            initial={{ name: modal.ingredient.name, unit: modal.ingredient.unit, currentPrice: String(Number(modal.ingredient.currentPrice)), category: modal.ingredient.category ?? '' }}
             onSave={(form) => handleEdit(modal.ingredient, form)}
             onCancel={() => setModal(null)}
           />
         </Modal>
       )}
-
       {modal?.type === 'delete' && (
-        <DeleteModal
-          ingredient={modal.ingredient}
-          onConfirm={() => handleDelete(modal.ingredient)}
-          onCancel={() => setModal(null)}
-        />
+        <DeleteModal ingredient={modal.ingredient} onConfirm={() => handleDelete(modal.ingredient)} onCancel={() => setModal(null)} />
       )}
-
       {modal?.type === 'history' && (
-        <PriceHistoryModal
-          ingredient={modal.ingredient}
-          onClose={() => setModal(null)}
-        />
+        <PriceHistoryModal ingredient={modal.ingredient} onClose={() => setModal(null)} />
       )}
-
-      {showOrderSheet && (
-        <OrderSheetModal onClose={() => setShowOrderSheet(false)} />
-      )}
-
-      {showLibrary && (
-        <LibraryModal
-          onClose={() => setShowLibrary(false)}
-          onImported={() => { load(); }}
-        />
-      )}
+      {showOrderSheet && <OrderSheetModal onClose={() => setShowOrderSheet(false)} />}
+      {showLibrary && <LibraryModal onClose={() => setShowLibrary(false)} onImported={() => { load(); }} />}
     </>
   );
 }

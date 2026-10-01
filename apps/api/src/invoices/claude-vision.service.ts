@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
 import Anthropic from '@anthropic-ai/sdk'
-import * as fs from 'fs'
 
 export interface ParsedInvoiceItem {
   rawName: string
@@ -28,24 +27,39 @@ export class ClaudeVisionService {
     })
   }
 
-  async validateInvoiceImage(
-    filePath: string,
+  /**
+   * Construit le bloc de contenu Claude à partir des octets du fichier.
+   * Le service ne touche jamais au disque : l'appelant décide d'où viennent
+   * les octets (disque local, stockage objet, mémoire).
+   */
+  private buildFileContent(
+    fileBuffer: Buffer,
     mimeType: string,
-  ): Promise<{ valid: boolean; reason: string }> {
-    const fileBuffer = fs.readFileSync(filePath)
+  ): Anthropic.ContentBlockParam {
     const base64 = fileBuffer.toString('base64')
 
-    const isPdf = mimeType === 'application/pdf'
-    const fileContent: Anthropic.MessageParam['content'][number] = isPdf
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-      : {
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-            data: base64,
-          },
-        }
+    if (mimeType === 'application/pdf') {
+      return {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: base64 },
+      }
+    }
+
+    return {
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        data: base64,
+      },
+    }
+  }
+
+  async validateInvoiceImage(
+    fileBuffer: Buffer,
+    mimeType: string,
+  ): Promise<{ valid: boolean; reason: string }> {
+    const fileContent = this.buildFileContent(fileBuffer, mimeType)
 
     const message = await this.client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -79,31 +93,10 @@ export class ClaudeVisionService {
   }
 
   async analyzeInvoice(
-    filePath: string,
+    fileBuffer: Buffer,
     mimeType: string,
   ): Promise<{ parsed: ParsedInvoice; rawResponse: string }> {
-    const fileBuffer = fs.readFileSync(filePath)
-    const base64 = fileBuffer.toString('base64')
-
-    const isPdf = mimeType === 'application/pdf'
-
-    const fileContent: Anthropic.MessageParam['content'][number] = isPdf
-      ? {
-          type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: base64,
-          },
-        }
-      : {
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-            data: base64,
-          },
-        }
+    const fileContent = this.buildFileContent(fileBuffer, mimeType)
 
     const message = await this.client.messages.create({
       model: 'claude-opus-4-6',

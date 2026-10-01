@@ -2,5 +2,17 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  // inspect-out / inspect-prebuild* sont des sorties de debogage du bundler
+  // Metro. inspect-out contient une copie complete du code de l'API NestJS :
+  // sans cette exclusion, `tsc` la compile et remonte 142 erreurs de
+  // decorateurs qui n'ont rien a voir avec l'application mobile.
+  // Ces dossiers devraient etre supprimes du depot (voir LISEZMOI de reprise).
+  "exclude": [
+    "node_modules",
+    "dist",
+    "inspect-out",
+    "inspect-prebuild",
+    "inspect-prebuild2"
+  ]
 }

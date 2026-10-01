@@ -1,6 +1,6 @@
 import {
-  Controller, Get, Post, Put, Delete,
-  Body, Param, ParseIntPipe, Request, UseGuards
+  Controller, Get, Post, Put, Patch, Delete,
+  Body, Param, Query, ParseIntPipe, Request, UseGuards, BadRequestException
 } from '@nestjs/common'
 import { RecipesService } from './recipes.service'
 import { CreateRecipeDto } from './dto/create-recipe.dto'
@@ -12,9 +12,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 export class RecipesController {
   constructor(private recipesService: RecipesService) {}
 
+  // ?activeOnly=true pour n'obtenir que les plats actuellement à la carte
   @Get()
-  findAll(@Request() req) {
-    return this.recipesService.findAll(req.user.sub)
+  findAll(@Request() req, @Query('activeOnly') activeOnly?: string) {
+    return this.recipesService.findAll(req.user.sub, activeOnly === 'true')
   }
 
   @Get('analysis')
@@ -39,6 +40,21 @@ export class RecipesController {
     @Request() req,
   ) {
     return this.recipesService.update(id, req.user.sub, dto)
+  }
+
+  // Retire le plat de la carte sans le supprimer (saisonnalité)
+  @Patch(':id/active')
+  setActive(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('isActive') isActive: unknown,
+    @Request() req,
+  ) {
+    // Sans ValidationPipe global, on vérifie ici : un `undefined` silencieux
+    // désactiverait le plat au lieu de renvoyer une erreur.
+    if (typeof isActive !== 'boolean') {
+      throw new BadRequestException('Le champ "isActive" doit être un booléen.')
+    }
+    return this.recipesService.setActive(id, req.user.sub, isActive)
   }
 
   @Delete(':id')

@@ -4,21 +4,16 @@ import {
   UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { diskStorage } from 'multer'
-import { extname, join } from 'path'
-import * as fs from 'fs'
+import { memoryStorage } from 'multer'
+import { extname } from 'path'
 import { InvoicesService } from './invoices.service'
 import { ValidateItemsDto } from './dto/validate-items.dto'
 import { RememberMatchDto } from './dto/remember-match.dto'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'invoices')
 const ALLOWED_MIMES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 Mo
-
-// Crée le dossier d'upload si nécessaire
-fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 @UseGuards(JwtAuthGuard)
 @Controller('invoices')
@@ -38,13 +33,9 @@ export class InvoicesController {
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: UPLOAD_DIR,
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`
-          cb(null, `invoice-${unique}${extname(file.originalname)}`)
-        },
-      }),
+      // Le fichier transite en mémoire : c'est StorageService qui décide
+      // ensuite où il est persisté (disque local ou stockage objet).
+      storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         const ext = extname(file.originalname).toLowerCase()

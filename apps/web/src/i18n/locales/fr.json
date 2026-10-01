@@ -258,6 +258,15 @@
       "foodCost": "Food cost",
       "profit": "Profit / plat",
       "edit": "Modifier la recette"
+    },
+    "active": {
+      "onMenu": "À la carte",
+      "offMenu": "Retiré de la carte",
+      "remove": "Retirer de la carte",
+      "restore": "Remettre à la carte",
+      "showInactive": "Afficher les plats retirés",
+      "hideInactive": "Masquer les plats retirés",
+      "excludedHint": "Les plats retirés ne comptent pas dans les moyennes ni les alertes."
     }
   },
   "invoices": {

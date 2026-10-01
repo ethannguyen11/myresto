@@ -2,50 +2,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
 type InvoiceStatus = 'pending' | 'analyzing' | 'reviewed' | 'validated' | 'error';
 
-interface Ingredient {
-  id: number;
-  name: string;
-  unit: string;
-}
-
+interface Ingredient { id: number; name: string; unit: string; }
 interface InvoiceItem {
-  id: number;
-  rawName: string;
-  quantity: number | null;
-  unit: string | null;
-  unitPrice: number | null;
-  totalPrice: number | null;
-  isConfirmed: boolean;
-  ingredientId: number | null;
-  ingredient: Ingredient | null;
-  matchScore: number | null;
-  matchMethod: string | null;
+  id: number; rawName: string; quantity: number | null; unit: string | null;
+  unitPrice: number | null; totalPrice: number | null; isConfirmed: boolean;
+  ingredientId: number | null; ingredient: Ingredient | null;
+  matchScore: number | null; matchMethod: string | null;
 }
-
 interface Invoice {
-  id: number;
-  supplierName: string | null;
-  invoiceDate: string | null;
-  totalAmount: number | null;
-  status: InvoiceStatus;
-  fileType: string | null;
-  createdAt: string;
-  items: InvoiceItem[];
+  id: number; supplierName: string | null; invoiceDate: string | null;
+  totalAmount: number | null; status: InvoiceStatus; fileType: string | null;
+  createdAt: string; items: InvoiceItem[];
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('fr-FR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
 function fmt(n: number | null, dec = 2): string {
   if (n === null || n === undefined) return '—';
   return Number(n).toFixed(dec).replace('.', ',');
@@ -53,21 +28,23 @@ function fmt(n: number | null, dec = 2): string {
 
 // ── Status badge ───────────────────────────────────────────────────────────
 
-const STATUS_CLS: Record<InvoiceStatus, string> = {
-  pending:   'bg-stone-100 text-stone-500',
-  analyzing: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200',
-  reviewed:  'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-  validated: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  error:     'bg-red-50 text-red-600 ring-1 ring-red-200',
+const STATUS_COLORS: Record<InvoiceStatus, { bg: string; color: string }> = {
+  pending:   { bg: 'var(--bg-tertiary)', color: 'var(--text-secondary)' },
+  analyzing: { bg: 'rgba(245,158,11,0.15)', color: 'var(--amber)' },
+  reviewed:  { bg: 'rgba(59,130,246,0.15)', color: '#60a5fa' },
+  validated: { bg: 'rgba(16,185,129,0.15)', color: 'var(--green)' },
+  error:     { bg: 'rgba(239,68,68,0.15)', color: 'var(--red)' },
 };
 
 function StatusBadge({ status }: { status: InvoiceStatus }) {
   const { t } = useTranslation();
+  const s = STATUS_COLORS[status];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLS[status]}`}>
-      {status === 'analyzing' && (
-        <span className="h-1.5 w-1.5 animate-ping rounded-full bg-amber-500" />
-      )}
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {status === 'analyzing' && <span className="h-1.5 w-1.5 animate-ping rounded-full" style={{ background: 'var(--amber)' }} />}
       {t(`invoices.status.${status}`)}
     </span>
   );
@@ -75,33 +52,22 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
 
 // ── Modal shell ────────────────────────────────────────────────────────────
 
-function Modal({
-  title,
-  onClose,
-  children,
-  wide,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-  wide?: boolean;
-}) {
+function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div
       ref={ref}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-12 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-12 backdrop-blur-sm"
+      style={{ background: 'rgba(0,0,0,0.6)' }}
       onMouseDown={(e) => { if (e.target === ref.current) onClose(); }}
     >
-      <div className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} rounded-2xl border border-stone-200 bg-white shadow-xl`}>
-        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <h2 className="text-sm font-semibold text-stone-900">{title}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
-          >
-            ✕
-          </button>
+      <div
+        className={`w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} rounded-2xl shadow-xl`}
+        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
+      >
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--bg-border)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+          <button onClick={onClose} className="rounded-md p-1 transition-colors" style={{ color: 'var(--text-tertiary)' }}>✕</button>
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
@@ -123,25 +89,16 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
     setError('');
     setProgress(0);
     setStatusMsg(t('invoices.upload.uploading'));
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       await api.post('/invoices/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
-        },
+        onUploadProgress: (e) => { if (e.total) setProgress(Math.round((e.loaded / e.total) * 100)); },
       });
       setStatusMsg(t('invoices.upload.sent'));
-      setTimeout(() => {
-        setProgress(null);
-        setStatusMsg('');
-        onUploaded();
-      }, 1500);
+      setTimeout(() => { setProgress(null); setStatusMsg(''); onUploaded(); }, 1500);
     } catch (err: any) {
-      console.error('[InvoicesPage] upload', err);
       setError(err.response?.data?.message ?? t('invoices.upload.failed'));
       setProgress(null);
       setStatusMsg('');
@@ -168,58 +125,45 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
   const busy = progress !== null;
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-      <div className="border-b border-stone-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-stone-700">{t('invoices.upload.title')}</h2>
-        <p className="mt-0.5 text-xs text-stone-400">{t('invoices.upload.formats')}</p>
+    <div className="rounded-xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}>
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--bg-border)' }}>
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t('invoices.upload.title')}</h2>
+        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.upload.formats')}</p>
       </div>
       <div className="p-5">
-        {/* Drop area */}
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => !busy && inputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors
-            ${busy ? 'cursor-default' : 'hover:border-emerald-400 hover:bg-emerald-50/50'}
-            ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300 bg-stone-50'}`}
+          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors"
+          style={{
+            borderColor: dragging ? 'var(--accent)' : 'var(--bg-border)',
+            background: dragging ? 'var(--accent-bg)' : 'var(--bg-tertiary)',
+            cursor: busy ? 'default' : 'pointer',
+          }}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-
+          <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
           {busy ? (
             <div className="w-full max-w-xs space-y-3">
-              <p className="text-sm font-medium text-stone-700">{statusMsg}</p>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200">
-                <div
-                  className="h-2 rounded-full bg-emerald-500 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{statusMsg}</p>
+              <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: 'var(--bg-border)' }}>
+                <div className="h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%`, background: 'var(--accent)' }} />
               </div>
-              <p className="text-xs text-stone-400">{progress}%</p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{progress}%</p>
             </div>
           ) : (
             <>
-              <span className="text-4xl">🧾</span>
-              <p className="mt-3 text-sm font-medium text-stone-700">
+              <span className="text-4xl" style={{ color: 'var(--accent)' }}>🧾</span>
+              <p className="mt-3 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 {t('invoices.upload.dropLabel')}{' '}
-                <span className="text-emerald-600 underline underline-offset-2">{t('invoices.upload.browse')}</span>
+                <span style={{ color: 'var(--accent)', textDecoration: 'underline' }}>{t('invoices.upload.browse')}</span>
               </p>
-              <p className="mt-1 text-xs text-stone-400">
-                {t('invoices.upload.aiDesc')}
-              </p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.upload.aiDesc')}</p>
             </>
           )}
         </div>
-
-        {error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="mt-3 text-sm" style={{ color: 'var(--red)' }}>{error}</p>}
       </div>
     </div>
   );
@@ -230,63 +174,52 @@ function UploadZone({ onUploaded }: { onUploaded: () => void }) {
 function MatchBadge({ method, score }: { method: string | null; score: number | null }) {
   if (method === 'auto' || method === 'memory') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--green)' }}>
         ✅ {method === 'memory' ? 'mémorisé' : `auto ${score !== null ? Math.round(score * 100) : '—'}%`}
       </span>
     );
   }
   if (method === 'suggestion') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--amber)' }}>
         ⚠️ suggestion {score !== null ? Math.round(score * 100) : '—'}%
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 ring-1 ring-red-200">
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--red)' }}>
       ❓ non reconnu
     </span>
   );
 }
 
-function itemRowClass(method: string | null) {
-  if (method === 'auto' || method === 'memory') return 'border-emerald-100 bg-emerald-50/40';
-  if (method === 'suggestion') return 'border-amber-100 bg-amber-50/40';
-  return 'border-red-100 bg-red-50/30';
+function itemRowBg(method: string | null): string {
+  if (method === 'auto' || method === 'memory') return 'rgba(16,185,129,0.05)';
+  if (method === 'suggestion') return 'rgba(245,158,11,0.05)';
+  return 'rgba(239,68,68,0.05)';
 }
 
 // ── Validation modal ───────────────────────────────────────────────────────
 
-function ValidationModal({
-  invoice,
-  ingredients,
-  onClose,
-  onValidated,
-}: {
-  invoice: Invoice;
-  ingredients: Ingredient[];
-  onClose: () => void;
-  onValidated: () => void;
+function ValidationModal({ invoice, ingredients, onClose, onValidated }: {
+  invoice: Invoice; ingredients: Ingredient[];
+  onClose: () => void; onValidated: () => void;
 }) {
   const { t } = useTranslation();
   const [selections, setSelections] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {};
-    for (const item of invoice.items) {
-      init[item.id] = item.ingredientId ? String(item.ingredientId) : '';
-    }
+    for (const item of invoice.items) init[item.id] = item.ingredientId ? String(item.ingredientId) : '';
     return init;
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ updated: number; created: number; ignored: number } | null>(null);
-
   const unconfirmed = invoice.items.filter((i) => !i.isConfirmed);
 
   async function handleValidate() {
     setError('');
     setSubmitting(true);
     try {
-      // Mémorise les correspondances manuelles (suggestion ou none)
       const toMemorize = unconfirmed.filter((item) => {
         const sel = selections[item.id];
         const isManual = item.matchMethod === 'suggestion' || item.matchMethod === 'none';
@@ -294,141 +227,101 @@ function ValidationModal({
         return isManual && sel && (changed || item.matchMethod === 'none');
       });
       await Promise.allSettled(
-        toMemorize.map((item) =>
-          api.post('/invoices/remember-match', {
-            rawName: item.rawName,
-            ingredientId: parseInt(selections[item.id]),
-          }),
-        ),
+        toMemorize.map((item) => api.post('/invoices/remember-match', { rawName: item.rawName, ingredientId: parseInt(selections[item.id]) })),
       );
-
-      const items = unconfirmed.map((item) => ({
-        itemId: item.id,
-        ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null,
-      }));
-      const res = await api.post<{ updated: number; created: number; ignored: number }>(
-        `/invoices/${invoice.id}/validate-items`, { items }
-      );
+      const items = unconfirmed.map((item) => ({ itemId: item.id, ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null }));
+      const res = await api.post<{ updated: number; created: number; ignored: number }>(`/invoices/${invoice.id}/validate-items`, { items });
       setResult(res.data);
       onValidated();
       setTimeout(() => onClose(), 2000);
     } catch (err: any) {
-      console.error('[InvoicesPage] validate-items', err);
       setError(err.response?.data?.message ?? t('invoices.validation.error'));
     } finally {
       setSubmitting(false);
     }
   }
 
-  const supplierLabel = invoice.supplierName ?? `Facture #${invoice.id}`;
+  const inputStyle = {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--bg-border)',
+    color: 'var(--text-primary)',
+    borderRadius: 8,
+    padding: '6px 8px',
+    fontSize: 12,
+    outline: 'none',
+  };
 
   return (
-    <Modal title={t('invoices.validation.title', { supplier: supplierLabel })} wide onClose={onClose}>
+    <Modal title={t('invoices.validation.title', { supplier: invoice.supplierName ?? `Facture #${invoice.id}` })} wide onClose={onClose}>
       <div className="space-y-4">
-        <p className="text-sm text-stone-500">
-          {t('invoices.validation.desc')}
-        </p>
-
-        {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</div>
-        )}
-
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t('invoices.validation.desc')}</p>
+        {error && <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)' }}>{error}</div>}
         {result && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            ✅ {result.updated} prix mis à jour · {result.created} nouveau{result.created !== 1 ? 'x' : ''} ingrédient{result.created !== 1 ? 's' : ''} créé{result.created !== 1 ? 's' : ''}
+          <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--green)', border: '1px solid rgba(16,185,129,0.2)' }}>
+            ✅ {result.updated} prix mis à jour · {result.created} ingrédient{result.created !== 1 ? 's' : ''} créé{result.created !== 1 ? 's' : ''}
           </div>
         )}
-
-        {/* Column headers */}
-        <div className="grid grid-cols-[1fr_70px_80px_130px_1fr] gap-2 border-b border-stone-100 pb-2 text-xs font-medium uppercase tracking-wide text-stone-400">
+        <div
+          className="grid grid-cols-[1fr_70px_80px_130px_1fr] gap-2 pb-2 text-xs font-medium uppercase tracking-wide"
+          style={{ borderBottom: '1px solid var(--bg-border)', color: 'var(--text-tertiary)' }}
+        >
           <span>{t('invoices.validation.colExtracted')}</span>
           <span className="text-right">{t('invoices.validation.colQty')}</span>
           <span className="text-right">{t('invoices.validation.colUnitPrice')}</span>
           <span>Confiance</span>
           <span>{t('invoices.validation.colLink')}</span>
         </div>
-
-        {/* Items */}
         <ul className="max-h-96 space-y-2 overflow-y-auto pr-1">
           {unconfirmed.length === 0 ? (
-            <li className="py-4 text-center text-sm text-stone-400">
-              {t('invoices.validation.allConfirmed')}
-            </li>
+            <li className="py-4 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.validation.allConfirmed')}</li>
           ) : (
             unconfirmed.map((item) => (
               <li
                 key={item.id}
-                className={`grid grid-cols-[1fr_70px_80px_130px_1fr] items-center gap-2 rounded-lg border px-3 py-2.5 ${itemRowClass(item.matchMethod)}`}
+                className="grid grid-cols-[1fr_70px_80px_130px_1fr] items-center gap-2 rounded-lg px-3 py-2.5"
+                style={{ background: itemRowBg(item.matchMethod), border: '1px solid var(--bg-border)' }}
               >
-                {/* Raw name */}
-                <span
-                  className="text-sm font-medium text-stone-800"
-                  title={item.rawName}
-                  style={{ wordBreak: 'break-word', whiteSpace: 'normal', maxWidth: '200px', display: 'block' }}
-                >
+                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)', wordBreak: 'break-word', whiteSpace: 'normal', maxWidth: '200px', display: 'block' }}>
                   {item.rawName}
-                  {item.unit && (
-                    <span className="ml-1 text-xs text-stone-400">({item.unit})</span>
-                  )}
+                  {item.unit && <span className="ml-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>({item.unit})</span>}
                 </span>
-
-                {/* Quantity */}
-                <span className="text-right text-sm text-stone-600">
+                <span className="text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {item.quantity !== null ? fmt(item.quantity, 3).replace(/,?0+$/, '') : '—'}
                 </span>
-
-                {/* Unit price */}
-                <span className="text-right text-sm text-stone-600">
+                <span className="text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {item.unitPrice !== null ? `${fmt(item.unitPrice)} €` : '—'}
                 </span>
-
-                {/* Match badge */}
                 <MatchBadge method={item.matchMethod} score={item.matchScore} />
-
-                {/* Ingredient selector */}
                 <select
                   value={selections[item.id] ?? ''}
-                  onChange={(e) =>
-                    setSelections((s) => ({ ...s, [item.id]: e.target.value }))
-                  }
-                  className="rounded-lg border border-stone-300 px-2 py-1.5 text-xs text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  onChange={(e) => setSelections((s) => ({ ...s, [item.id]: e.target.value }))}
+                  style={inputStyle}
                 >
                   <option value="">{t('invoices.validation.ignore')}</option>
                   {ingredients.map((ing) => (
-                    <option key={ing.id} value={ing.id}>
-                      {ing.name} ({ing.unit})
-                    </option>
+                    <option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>
                   ))}
                 </select>
               </li>
             ))
           )}
         </ul>
-
-        {/* Already confirmed */}
         {invoice.items.some((i) => i.isConfirmed) && (
-          <p className="text-xs text-stone-400">
-            {t('invoices.validation.alreadyConfirmed', {
-              count: invoice.items.filter((i) => i.isConfirmed).length,
-            })}
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            {t('invoices.validation.alreadyConfirmed', { count: invoice.items.filter((i) => i.isConfirmed).length })}
           </p>
         )}
-
-        <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
-          >
+        <div className="flex justify-end gap-2 pt-4" style={{ borderTop: '1px solid var(--bg-border)' }}>
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm" style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}>
             {t('common.cancel')}
           </button>
           <button
             onClick={handleValidate}
             disabled={submitting || unconfirmed.length === 0}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+            style={{ background: 'var(--accent)', color: '#000' }}
           >
-            {submitting
-              ? t('invoices.validation.confirming')
-              : t('invoices.validation.confirm', { count: unconfirmed.length })}
+            {submitting ? t('invoices.validation.confirming') : t('invoices.validation.confirm', { count: unconfirmed.length })}
           </button>
         </div>
       </div>
@@ -444,9 +337,7 @@ type InvStatusFilter = InvoiceStatus | 'all';
 const INV_STATUSES: InvStatusFilter[] = ['all', 'pending', 'analyzing', 'reviewed', 'validated', 'error'];
 const INV_PERIODS: InvPeriod[] = [0, 7, 30, 90];
 
-type ActiveModal =
-  | { type: 'validate'; invoice: Invoice }
-  | { type: 'delete'; invoice: Invoice };
+type ActiveModal = { type: 'validate'; invoice: Invoice } | { type: 'delete'; invoice: Invoice };
 
 export function InvoicesPage() {
   const { t } = useTranslation();
@@ -456,8 +347,6 @@ export function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // ── Filter & sort state ──
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvStatusFilter>('all');
   const [period, setPeriod] = useState<InvPeriod>(0);
@@ -465,14 +354,10 @@ export function InvoicesPage() {
 
   const load = useCallback(async (silent = false) => {
     try {
-      const [invRes, ingRes] = await Promise.all([
-        api.get<Invoice[]>('/invoices'),
-        api.get<Ingredient[]>('/ingredients'),
-      ]);
+      const [invRes, ingRes] = await Promise.all([api.get<Invoice[]>('/invoices'), api.get<Ingredient[]>('/ingredients')]);
       setInvoices(invRes.data);
       setIngredients(ingRes.data);
     } catch (err: any) {
-      console.error('[InvoicesPage] load', err);
       if (!silent) setError(err.response?.data?.message ?? t('invoices.loadError'));
     } finally {
       if (!silent) setLoading(false);
@@ -481,95 +366,69 @@ export function InvoicesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Poll every 4s while any invoice is analyzing
   useEffect(() => {
-    const hasAnalyzing = invoices.some(
-      (inv) => inv.status === 'pending' || inv.status === 'analyzing',
-    );
-
+    const hasAnalyzing = invoices.some((inv) => inv.status === 'pending' || inv.status === 'analyzing');
     if (hasAnalyzing && !pollRef.current) {
       pollRef.current = setInterval(() => load(true), 4000);
     } else if (!hasAnalyzing && pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-
-    return () => {
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-    };
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [invoices, load]);
 
   async function handleAnalyze(invoice: Invoice) {
-    try {
-      await api.post(`/invoices/${invoice.id}/analyze`);
-      await load(true);
-    } catch (err: any) {
-      console.error('[InvoicesPage] analyze', err);
-    }
+    try { await api.post(`/invoices/${invoice.id}/analyze`); await load(true); } catch {}
   }
-
   async function handleDelete(invoice: Invoice) {
-    try {
-      await api.delete(`/invoices/${invoice.id}`);
-      setModal(null);
-      await load(true);
-    } catch (err: any) {
-      console.error('[InvoicesPage] delete', err);
-    }
+    try { await api.delete(`/invoices/${invoice.id}`); setModal(null); await load(true); } catch {}
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex h-64 items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700">
-        {error}
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="rounded-xl px-6 py-5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.2)' }}>
+      {error}
+    </div>
+  );
 
   const validated = invoices.filter((i) => i.status === 'validated').length;
   const toReview  = invoices.filter((i) => i.status === 'reviewed').length;
-
-  // ── Filtered + sorted invoices ──
   const now = Date.now();
   let filtered = invoices;
-  if (search.trim()) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter((inv) => (inv.supplierName ?? '').toLowerCase().includes(q));
-  }
-  if (statusFilter !== 'all') {
-    filtered = filtered.filter((inv) => inv.status === statusFilter);
-  }
-  if (period > 0) {
-    const cutoff = now - period * 24 * 60 * 60 * 1000;
-    filtered = filtered.filter((inv) => new Date(inv.createdAt).getTime() >= cutoff);
-  }
+  if (search.trim()) filtered = filtered.filter((inv) => (inv.supplierName ?? '').toLowerCase().includes(search.toLowerCase()));
+  if (statusFilter !== 'all') filtered = filtered.filter((inv) => inv.status === statusFilter);
+  if (period > 0) filtered = filtered.filter((inv) => new Date(inv.createdAt).getTime() >= now - period * 24 * 60 * 60 * 1000);
   filtered = [...filtered].sort((a, b) => {
     const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     return sortDir === 'desc' ? -diff : diff;
   });
 
-  const selectCls = 'rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white';
+  const inputStyle = {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--bg-border)',
+    color: 'var(--text-primary)',
+    borderRadius: 8,
+    padding: '8px 12px',
+    fontSize: 14,
+    outline: 'none',
+  };
 
   return (
     <>
       <div className="space-y-6">
-
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900 dark:text-white">{t('invoices.title')}</h1>
-            <p className="mt-0.5 text-sm text-stone-500 dark:text-gray-400">
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('invoices.title')}</h1>
+            <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
               {t('invoices.subtitle', { count: invoices.length })}
               {toReview > 0 && (
-                <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>
                   {t('invoices.toValidate', { count: toReview })}
                 </span>
               )}
@@ -578,46 +437,35 @@ export function InvoicesPage() {
           {invoices.length > 0 && (
             <div className="flex gap-4 text-right">
               <div>
-                <p className="text-xs text-stone-400">{t('invoices.validated')}</p>
-                <p className="text-lg font-semibold text-emerald-600">{validated}</p>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.validated')}</p>
+                <p className="text-lg font-semibold" style={{ color: 'var(--green)' }}>{validated}</p>
               </div>
               <div>
-                <p className="text-xs text-stone-400">{t('invoices.totalImported')}</p>
-                <p className="text-lg font-semibold text-stone-800">{invoices.length}</p>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.totalImported')}</p>
+                <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{invoices.length}</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Upload zone */}
         <UploadZone onUploaded={() => load(true)} />
 
-        {/* Invoice list */}
         {invoices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div
+            className="flex flex-col items-center justify-center rounded-xl border-dashed py-12 text-center"
+            style={{ border: '2px dashed var(--bg-border)', background: 'var(--bg-secondary)' }}
+          >
             <span className="text-4xl">📂</span>
-            <p className="mt-3 text-sm font-medium text-stone-700 dark:text-gray-200">{t('invoices.empty.title')}</p>
-            <p className="mt-1 text-xs text-stone-400 dark:text-gray-500">{t('invoices.empty.desc')}</p>
+            <p className="mt-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t('invoices.empty.title')}</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.empty.desc')}</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            {/* ── Filter bar ── */}
-            <div className="border-b border-stone-100 p-4 dark:border-gray-700 space-y-3">
+          <div className="rounded-xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}>
+            {/* Filter bar */}
+            <div className="p-4 space-y-3" style={{ borderBottom: '1px solid var(--bg-border)' }}>
               <div className="flex flex-wrap gap-3">
-                {/* Search */}
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t('invoices.filters.searchPlaceholder')}
-                  className={`flex-1 min-w-[180px] ${selectCls}`}
-                />
-                {/* Status */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as InvStatusFilter)}
-                  className={selectCls}
-                >
+                <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('invoices.filters.searchPlaceholder')} className="flex-1 min-w-[180px]" style={inputStyle} />
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as InvStatusFilter)} style={inputStyle}>
                   <option value="all">{t('invoices.filters.allStatuses')}</option>
                   {INV_STATUSES.filter((s) => s !== 'all').map((s) => (
                     <option key={s} value={s}>{t(`invoices.status.${s}`)}</option>
@@ -625,34 +473,27 @@ export function InvoicesPage() {
                 </select>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {/* Period buttons */}
                 {INV_PERIODS.map((p) => {
-                  const label = p === 0 ? t('invoices.filters.periodAll')
-                    : p === 7 ? t('invoices.filters.period7')
-                    : p === 30 ? t('invoices.filters.period30')
-                    : t('invoices.filters.period90');
+                  const label = p === 0 ? t('invoices.filters.periodAll') : p === 7 ? t('invoices.filters.period7') : p === 30 ? t('invoices.filters.period30') : t('invoices.filters.period90');
                   return (
                     <button
                       key={p}
                       onClick={() => setPeriod(p)}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        period === p
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                      }`}
+                      className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                      style={{ background: period === p ? 'var(--accent)' : 'var(--bg-tertiary)', color: period === p ? '#000' : 'var(--text-secondary)' }}
                     >
                       {label}
                     </button>
                   );
                 })}
-                {/* Sort toggle */}
                 <button
                   onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
-                  className="rounded-full px-3 py-1 text-xs font-medium bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+                  style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
                 >
                   {sortDir === 'desc' ? t('invoices.filters.sortNewest') : t('invoices.filters.sortOldest')} {sortDir === 'desc' ? '↓' : '↑'}
                 </button>
-                <span className="ml-auto text-xs text-stone-400 dark:text-gray-500">
+                <span className="ml-auto text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   {t('invoices.filters.displayed', { count: filtered.length })}
                 </span>
               </div>
@@ -661,85 +502,69 @@ export function InvoicesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50 text-left text-xs font-medium uppercase tracking-wide text-stone-400 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-500">
-                    <th className="px-5 py-3">{t('invoices.table.supplier')}</th>
-                    <th className="px-5 py-3">{t('invoices.table.invoiceDate')}</th>
-                    <th className="px-5 py-3">{t('invoices.table.importedOn')}</th>
-                    <th className="px-5 py-3 text-right">{t('invoices.table.amount')}</th>
-                    <th className="px-5 py-3 text-center">{t('invoices.table.lines')}</th>
-                    <th className="px-5 py-3">{t('invoices.table.status')}</th>
-                    <th className="px-5 py-3" />
+                  <tr style={{ borderBottom: '1px solid var(--bg-border)' }}>
+                    {[t('invoices.table.supplier'), t('invoices.table.invoiceDate'), t('invoices.table.importedOn'), t('invoices.table.amount'), t('invoices.table.lines'), t('invoices.table.status'), ''].map((h, i) => (
+                      <th
+                        key={i}
+                        className={`px-5 py-3 text-xs font-medium uppercase tracking-wide text-left${i === 3 ? ' text-right' : i === 4 ? ' text-center' : ''}`}
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 dark:divide-gray-700">
+                <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-sm text-stone-400 dark:text-gray-500">
+                      <td colSpan={7} className="py-10 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
                         <span className="block text-2xl mb-2">🔍</span>
                         {t('invoices.filters.noResults')}
                       </td>
                     </tr>
                   ) : filtered.map((inv) => (
-                    <tr key={inv.id} className="group hover:bg-stone-50">
-                      {/* Supplier */}
+                    <tr
+                      key={inv.id}
+                      className="group transition-colors"
+                      style={{ borderBottom: '1px solid var(--bg-border)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-tertiary)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                    >
                       <td className="px-5 py-3">
-                        <span className="font-medium text-stone-800">
-                          {inv.supplierName ?? (
-                            <span className="text-stone-400 italic">{t('invoices.table.analyzing')}</span>
-                          )}
+                        <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {inv.supplierName ?? <span className="italic" style={{ color: 'var(--text-tertiary)' }}>{t('invoices.table.analyzing')}</span>}
                         </span>
                       </td>
-
-                      {/* Invoice date */}
-                      <td className="px-5 py-3 text-stone-500">{fmtDate(inv.invoiceDate)}</td>
-
-                      {/* Import date */}
-                      <td className="px-5 py-3 text-xs text-stone-400">{fmtDate(inv.createdAt)}</td>
-
-                      {/* Total */}
-                      <td className="px-5 py-3 text-right font-semibold text-stone-800">
+                      <td className="px-5 py-3" style={{ color: 'var(--text-secondary)' }}>{fmtDate(inv.invoiceDate)}</td>
+                      <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }}>{fmtDate(inv.createdAt)}</td>
+                      <td className="px-5 py-3 text-right font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {inv.totalAmount !== null ? `${fmt(inv.totalAmount)} €` : '—'}
                       </td>
-
-                      {/* Item count */}
                       <td className="px-5 py-3 text-center">
                         {inv.items.length > 0 ? (
-                          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">
+                          <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
                             {inv.items.length}
                           </span>
-                        ) : (
-                          <span className="text-stone-300">—</span>
-                        )}
+                        ) : <span style={{ color: 'var(--bg-border)' }}>—</span>}
                       </td>
-
-                      {/* Status */}
+                      <td className="px-5 py-3"><StatusBadge status={inv.status} /></td>
                       <td className="px-5 py-3">
-                        <StatusBadge status={inv.status} />
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {inv.status === 'reviewed' && (
-                            <button
-                              onClick={() => setModal({ type: 'validate', invoice: inv })}
-                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
-                            >
+                            <button onClick={() => setModal({ type: 'validate', invoice: inv })} className="rounded-md px-2.5 py-1.5 text-xs font-medium" style={{ color: '#60a5fa' }}>
                               {t('common.validate')}
                             </button>
                           )}
                           {inv.status === 'error' && (
-                            <button
-                              onClick={() => handleAnalyze(inv)}
-                              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50"
-                            >
+                            <button onClick={() => handleAnalyze(inv)} className="rounded-md px-2.5 py-1.5 text-xs font-medium" style={{ color: 'var(--amber)' }}>
                               {t('invoices.reanalyze')}
                             </button>
                           )}
                           <button
                             onClick={() => setModal({ type: 'delete', invoice: inv })}
                             disabled={inv.status === 'analyzing'}
-                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-30"
+                            className="rounded-md px-2.5 py-1.5 text-xs font-medium disabled:opacity-30"
+                            style={{ color: 'var(--red)' }}
                           >
                             {t('common.delete')}
                           </button>
@@ -754,34 +579,19 @@ export function InvoicesPage() {
         )}
       </div>
 
-      {/* ── Modals ── */}
       {modal?.type === 'validate' && (
-        <ValidationModal
-          invoice={modal.invoice}
-          ingredients={ingredients}
-          onClose={() => setModal(null)}
-          onValidated={() => load(true)}
-        />
+        <ValidationModal invoice={modal.invoice} ingredients={ingredients} onClose={() => setModal(null)} onValidated={() => load(true)} />
       )}
-
       {modal?.type === 'delete' && (
         <Modal title={t('common.confirmDelete')} onClose={() => setModal(null)}>
-          <p className="text-sm text-stone-600">
-            {t('invoices.delete.message', {
-              name: modal.invoice.supplierName ?? `#${modal.invoice.id}`,
-            })}
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            {t('invoices.delete.message', { name: modal.invoice.supplierName ?? `#${modal.invoice.id}` })}
           </p>
           <div className="mt-5 flex justify-end gap-2">
-            <button
-              onClick={() => setModal(null)}
-              className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-600 transition-colors hover:bg-stone-50"
-            >
+            <button onClick={() => setModal(null)} className="rounded-lg px-4 py-2 text-sm" style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}>
               {t('common.cancel')}
             </button>
-            <button
-              onClick={() => handleDelete(modal.invoice)}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
-            >
+            <button onClick={() => handleDelete(modal.invoice)} className="rounded-lg px-4 py-2 text-sm font-medium" style={{ background: 'var(--red)', color: '#fff' }}>
               {t('common.deleteForever')}
             </button>
           </div>

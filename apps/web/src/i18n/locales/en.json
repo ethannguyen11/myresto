@@ -258,6 +258,15 @@
       "foodCost": "Food cost",
       "profit": "Profit / dish",
       "edit": "Edit recipe"
+    },
+    "active": {
+      "onMenu": "On the menu",
+      "offMenu": "Off the menu",
+      "remove": "Remove from menu",
+      "restore": "Put back on menu",
+      "showInactive": "Show removed dishes",
+      "hideInactive": "Hide removed dishes",
+      "excludedHint": "Removed dishes are excluded from averages and alerts."
     }
   },
   "invoices": {

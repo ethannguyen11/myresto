@@ -31,7 +31,7 @@ export class AdvisorService {
 
   private async buildContext(userId: number): Promise<string> {
     const [recipes, ingredients, dashboard] = await Promise.all([
-      this.recipesService.findAll(userId),
+      this.recipesService.findAll(userId, true),
       this.prisma.ingredient.findMany({
         where: { userId },
         orderBy: { name: 'asc' },
@@ -123,7 +123,7 @@ ${dashboard.alerts.length > 0 ? dashboard.alerts.join('\n') : 'Aucune alerte.'}
     suggestions: string
     recipes: object[]
   }> {
-    const recipes = await this.recipesService.findAll(userId)
+    const recipes = await this.recipesService.findAll(userId, true)
 
     const currentAvgFoodCost =
       recipes.length > 0
@@ -203,7 +203,7 @@ ${dashboard.alerts.length > 0 ? dashboard.alerts.join('\n') : 'Aucune alerte.'}
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
     const [recipes, ingredients, invoices, dashboard] = await Promise.all([
-      this.recipesService.findAll(userId),
+      this.recipesService.findAll(userId, true),
       this.prisma.ingredient.findMany({
         where: { userId },
         orderBy: { name: 'asc' },

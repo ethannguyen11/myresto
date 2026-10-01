@@ -9,5 +9,6 @@ export class UpdateRecipeDto {
   prepTimeMinutes?: number
   servings?: number
   wastagePercent?: number
+  isActive?: boolean
   items?: RecipeItemDto[]
 }

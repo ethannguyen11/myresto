@@ -1,24 +1,55 @@
 services:
   - type: web
-    name: chefai-api
+    name: Chef AI
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
-    # Context is apps/api/ — only the API source is sent to Docker,
-    # keeping the build context small (excludes web, mobile, root)
-    dockerContext: ./apps/api
+    # Le contexte est la RACINE du monorepo, pas apps/api.
+    # Le Dockerfile copie package-lock.json et les package.json des trois
+    # workspaces (COPY apps/api/package.json, apps/web/..., apps/mobile/...) :
+    # avec dockerContext: ./apps/api ces chemins n'existent pas et le build casse.
+    dockerContext: .
     plan: free
+    region: frankfurt
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
-      # Set these manually in the Render dashboard — never commit secrets
+
+      # ── Secrets : à renseigner dans le dashboard Render, jamais ici ────────
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
-      # Note: the codebase reads ANTHROPIC_API_KEY (not CLAUDE_API_KEY)
+      # Le code lit ANTHROPIC_API_KEY (pas CLAUDE_API_KEY)
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Sans cette clé, aucun email ne part : le rapport hebdomadaire du lundi
+      # tourne à vide. L'API le signale désormais au démarrage.
       - key: RESEND_API_KEY
+        sync: false
+
+      # ── URL publique du front ─────────────────────────────────────────────
+      # Sert à construire les liens dans les emails. Sans elle, le code retombe
+      # sur une URL codée en dur qui pointe vers un autre déploiement.
+      - key: FRONTEND_URL
+        sync: false
+
+      # ── Stockage des factures ─────────────────────────────────────────────
+      # Le disque du conteneur est éphémère : sans stockage objet, tout fichier
+      # uploadé disparaît au premier redéploiement ou réveil du service.
+      # Compatible AWS S3, Cloudflare R2, Supabase Storage, MinIO, Scaleway.
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      # Requis pour tout fournisseur autre qu'AWS S3 (R2, Supabase, MinIO).
+      # À laisser vide sur AWS, qui déduit l'endpoint de la région.
+      - key: S3_ENDPOINT
         sync: false

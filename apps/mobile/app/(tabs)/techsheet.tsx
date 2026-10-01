@@ -47,6 +47,9 @@ interface TechSheet {
   servings: number;
   difficulty: string | null;
   createdAt: string;
+  // Recette rattachee, renvoyee par l'API depuis TechSheet.recipeId.
+  // null quand la fiche est autonome ou que la recette a ete supprimee.
+  recipe: { id: number; name: string; sellingPrice: number } | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -377,6 +380,11 @@ export default function TechSheetScreen() {
                         {s.category ? `${s.category} · ` : ''}{s.servings} couvert{s.servings > 1 ? 's' : ''}
                         {s.difficulty ? ` · ${s.difficulty}` : ''}
                       </Text>
+                      {s.recipe && (
+                        <Text style={styles.sheetRecipeLink} numberOfLines={1}>
+                          🔗 {s.recipe.name}
+                        </Text>
+                      )}
                     </View>
                     <Text style={styles.sheetDate}>
                       {new Date(s.createdAt).toLocaleDateString('fr-FR')}
@@ -552,6 +560,7 @@ const styles = StyleSheet.create({
   sheetInfo: { flex: 1 },
   sheetName: { fontSize: 14, fontWeight: '600', color: STONE_800 },
   sheetMeta: { fontSize: 12, color: STONE_400, marginTop: 2 },
+  sheetRecipeLink: { fontSize: 11, color: '#16a34a', marginTop: 3 },
   sheetDate: { fontSize: 11, color: STONE_400 },
 
   // Recording

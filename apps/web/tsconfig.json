@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+
+    // Vite transpile sans vérifier les types : sans `tsc --noEmit`, aucune
+    // erreur de typage n'est jamais remontée. Le niveau est volontairement
+    // modéré pour l'instant — le code existant n'a jamais été vérifié.
+    // À durcir progressivement (noUnusedLocals, noImplicitAny, strict).
+    "strict": false,
+    "noImplicitAny": false,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}

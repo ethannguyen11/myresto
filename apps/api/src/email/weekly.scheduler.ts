@@ -18,6 +18,15 @@ export class WeeklyScheduler {
   async sendWeeklyEmails() {
     this.logger.log('Running weekly email job...')
 
+    // On sort tout de suite plutôt que de boucler sur tous les utilisateurs
+    // pour finir par « 0/N envoyés » sans jamais dire pourquoi.
+    if (!this.emailService.isConfigured) {
+      this.logger.error(
+        'Job hebdomadaire interrompu : RESEND_API_KEY non configurée, aucun email ne peut partir.',
+      )
+      return
+    }
+
     const users = await this.prisma.user.findMany({
       where: { isActive: true },
       select: { id: true, email: true, firstName: true },

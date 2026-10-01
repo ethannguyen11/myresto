@@ -1,8 +1,9 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, UnprocessableEntityException } from '@nestjs/common'
-import * as fs from 'fs'
+import * as fs from 'fs/promises'
 import { PrismaService } from '../prisma/prisma.service'
 import { ClaudeVisionService } from './claude-vision.service'
 import { MatchingService } from './matching.service'
+import { StorageService } from '../storage/storage.service'
 import { ValidateItemsDto } from './dto/validate-items.dto'
 
 @Injectable()
@@ -13,7 +14,33 @@ export class InvoicesService {
     private prisma: PrismaService,
     private claudeVision: ClaudeVisionService,
     private matchingService: MatchingService,
+    private storage: StorageService,
   ) {}
+
+  /**
+   * Relit les octets d'une facture.
+   *
+   * Les factures créées avant l'introduction de StorageService ont un chemin
+   * absolu dans fileUrl. On tente le disque pour celles-là, en expliquant
+   * clairement ce qui s'est passé si le fichier a disparu — c'était le cas de
+   * toutes les factures dès que le conteneur redémarrait.
+   */
+  private async readInvoiceFile(fileUrl: string): Promise<Buffer> {
+    if (!this.storage.isLegacyAbsolutePath(fileUrl)) {
+      return this.storage.read(fileUrl)
+    }
+
+    try {
+      return await fs.readFile(fileUrl)
+    } catch {
+      throw new NotFoundException(
+        'Le fichier de cette facture n\'est plus disponible : il avait été enregistré ' +
+          'sur le disque local, qui est effacé à chaque redéploiement. ' +
+          'Les lignes déjà extraites restent consultables, mais une nouvelle analyse ' +
+          'nécessite de réimporter le document.',
+      )
+    }
+  }
 
   async findAll(userId: number) {
     return this.prisma.invoice.findMany({
@@ -43,28 +70,35 @@ export class InvoicesService {
   // Crée la facture et déclenche l'analyse en arrière-plan
   async upload(userId: number, file: Express.Multer.File) {
     // ── Pré-validation : vérifie que l'image est bien une facture ──────────
-    const validation = await this.claudeVision.validateInvoiceImage(file.path, file.mimetype)
+    // Elle a lieu avant toute écriture : un document rejeté n'est jamais persisté.
+    const validation = await this.claudeVision.validateInvoiceImage(file.buffer, file.mimetype)
     if (!validation.valid) {
       this.logger.warn(
         `Image rejetée — userId=${userId} timestamp=${new Date().toISOString()} reason="${validation.reason}"`,
       )
-      try { fs.unlinkSync(file.path) } catch { /* fichier déjà supprimé ou inaccessible */ }
       throw new UnprocessableEntityException(
         `Cette image ne semble pas être une facture. Raison : ${validation.reason}`,
       )
     }
 
+    const storageKey = await this.storage.save(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    )
+
     const invoice = await this.prisma.invoice.create({
       data: {
         userId,
-        fileUrl: file.path,
+        fileUrl: storageKey,
         fileType: file.mimetype,
         status: 'pending',
       },
     })
 
-    // Fire-and-forget : on répond immédiatement, l'analyse tourne en fond
-    this._runAnalysis(invoice.id, userId, file.path, file.mimetype).catch((err) => {
+    // Fire-and-forget : on répond immédiatement, l'analyse tourne en fond.
+    // Le buffer est déjà en mémoire, inutile de relire le stockage.
+    this._runAnalysis(invoice.id, userId, file.buffer, file.mimetype).catch((err) => {
       this.logger.error(`Échec analyse facture #${invoice.id}`, err)
     })
 
@@ -79,10 +113,14 @@ export class InvoicesService {
       throw new BadRequestException('Une analyse est déjà en cours')
     }
 
+    // Relu avant de toucher aux items : si le fichier a disparu, on échoue
+    // proprement sans avoir détruit les lignes déjà extraites.
+    const fileBuffer = await this.readInvoiceFile(invoice.fileUrl!)
+
     // Supprime les anciens items pour repartir propre
     await this.prisma.invoiceItem.deleteMany({ where: { invoiceId } })
 
-    this._runAnalysis(invoiceId, userId, invoice.fileUrl!, invoice.fileType!).catch((err) => {
+    this._runAnalysis(invoiceId, userId, fileBuffer, invoice.fileType!).catch((err) => {
       this.logger.error(`Échec re-analyse facture #${invoiceId}`, err)
     })
 
@@ -92,7 +130,7 @@ export class InvoicesService {
   private async _runAnalysis(
     invoiceId: number,
     userId: number,
-    filePath: string,
+    fileBuffer: Buffer,
     mimeType: string,
   ) {
     await this.prisma.invoice.update({
@@ -101,7 +139,7 @@ export class InvoicesService {
     })
 
     try {
-      const { parsed, rawResponse } = await this.claudeVision.analyzeInvoice(filePath, mimeType)
+      const { parsed, rawResponse } = await this.claudeVision.analyzeInvoice(fileBuffer, mimeType)
 
       // Récupère les ingrédients de l'utilisateur pour le matching intelligent
       const userIngredients = await this.prisma.ingredient.findMany({
@@ -327,8 +365,16 @@ export class InvoicesService {
   }
 
   async remove(id: number, userId: number) {
-    await this.findOne(id, userId)
+    const invoice = await this.findOne(id, userId)
     await this.prisma.invoiceItem.deleteMany({ where: { invoiceId: id } })
-    return this.prisma.invoice.delete({ where: { id } })
+    const deleted = await this.prisma.invoice.delete({ where: { id } })
+
+    // Le fichier n'est supprimé qu'une fois la ligne effacée : en cas d'échec
+    // à mi-chemin, mieux vaut un fichier orphelin qu'une facture sans document.
+    if (invoice.fileUrl && !this.storage.isLegacyAbsolutePath(invoice.fileUrl)) {
+      await this.storage.delete(invoice.fileUrl)
+    }
+
+    return deleted
   }
 }
