@@ -23,6 +23,33 @@ export class RecipesController {
     return this.recipesService.getMenuAnalysis(req.user.sub)
   }
 
+  // Préparations de base utilisables comme sous-recettes
+  @Get('preparations')
+  findPreparations(@Request() req) {
+    return this.recipesService.findPreparations(req.user.sub)
+  }
+
+  /**
+   * Simule l'impact de nouveaux prix d'ingrédients sur les plats, sans rien
+   * enregistrer. Corps : { prices: [{ ingredientId, price }] }
+   */
+  @Post('price-impact')
+  priceImpact(@Body('prices') prices: unknown, @Request() req) {
+    if (!Array.isArray(prices) || prices.length === 0) {
+      throw new BadRequestException('"prices" doit être une liste de { ingredientId, price }.')
+    }
+    const map = new Map<number, number>()
+    for (const p of prices as any[]) {
+      const id = Number(p?.ingredientId)
+      const price = Number(p?.price)
+      if (!Number.isInteger(id) || !Number.isFinite(price) || price < 0) {
+        throw new BadRequestException('Chaque entrée doit avoir un ingredientId entier et un prix positif.')
+      }
+      map.set(id, price)
+    }
+    return this.recipesService.priceImpact(req.user.sub, map)
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.recipesService.findOne(id, req.user.sub)

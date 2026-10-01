@@ -5,6 +5,9 @@ import { ClaudeVisionService } from './claude-vision.service'
 import { MatchingService } from './matching.service'
 import { StorageService } from '../storage/storage.service'
 import { ValidateItemsDto } from './dto/validate-items.dto'
+import { RecipesService } from '../recipes/recipes.service'
+import { NotificationsService } from '../notifications/notifications.service'
+import { conversionFactor } from '../recipes/units'
 
 @Injectable()
 export class InvoicesService {
@@ -15,6 +18,8 @@ export class InvoicesService {
     private claudeVision: ClaudeVisionService,
     private matchingService: MatchingService,
     private storage: StorageService,
+    private recipesService: RecipesService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -164,6 +169,8 @@ export class InvoicesService {
             totalPrice: item.totalPrice,
             matchScore: match.score,
             matchMethod: match.method,
+            // Facteur colis → unité d'ingrédient appris lors d'une facture précédente
+            conversionFactor: match.conversionFactor ?? null,
           }
         }),
       )
@@ -196,101 +203,170 @@ export class InvoicesService {
     }
   }
 
+  /**
+   * Prix par unité d'ingrédient à partir d'une ligne de facture.
+   *
+   * `factor` = nombre d'unités de l'ingrédient dans 1 unité de la facture.
+   * Priorité : facteur saisi par l'utilisateur ou mémorisé, puis conversion
+   * automatique (g → kg, cl → L). Null si rien ne permet de convertir
+   * (« colis » vers « kg » sans facteur connu).
+   */
+  private _pricePerIngredientUnit(
+    unitPrice: number,
+    invoiceUnit: string | null,
+    ingredientUnit: string,
+    explicitFactor: number | null,
+  ): { price: number; factor: number } | null {
+    const factor =
+      explicitFactor ?? (invoiceUnit ? conversionFactor(invoiceUnit, ingredientUnit) : 1)
+    if (factor == null || !(factor > 0)) return null
+    return { price: Math.round((unitPrice / factor) * 10000) / 10000, factor }
+  }
+
   // Confirme des lignes, met à jour les prix et crée les ingrédients manquants
   async validateItems(invoiceId: number, userId: number, dto: ValidateItemsDto) {
-    await this.findOne(invoiceId, userId)
+    const invoice = await this.findOne(invoiceId, userId)
+    const ownItemIds = new Set(invoice.items.map((i) => i.id))
 
     let updated = 0
     let created = 0
     let ignored = 0
+    const needsConversion: {
+      itemId: number
+      rawName: string
+      invoiceUnit: string | null
+      ingredientName: string
+      ingredientUnit: string
+    }[] = []
 
-    try {
-      for (const { itemId, ingredientId } of dto.items) {
-        if (!itemId) continue
+    // Pour l'impact : prix avant la facture, et prix après
+    const oldPrices = new Map<number, number>()
+    const newPrices = new Map<number, number>()
 
-        // Applique l'ingredientId sélectionné par l'utilisateur
-        if (ingredientId !== undefined) {
-          try {
-            await this.prisma.invoiceItem.update({
-              where: { id: itemId },
-              data: { ingredientId: ingredientId ?? null },
-            })
-          } catch (err) {
-            this.logger.warn(`Impossible de mettre à jour l'item #${itemId} : ${err}`)
+    for (const { itemId, ingredientId, conversionFactor: userFactor } of dto.items) {
+      if (!itemId || !ownItemIds.has(itemId)) continue
+
+      // Applique l'ingredientId sélectionné par l'utilisateur, s'il lui appartient
+      if (ingredientId !== undefined) {
+        if (ingredientId !== null) {
+          const owned = await this.prisma.ingredient.count({ where: { id: ingredientId, userId } })
+          if (!owned) {
+            this.logger.warn(`Ingrédient #${ingredientId} refusé : n'appartient pas à l'utilisateur`)
             continue
           }
         }
-
-        // Récupère l'état final de l'item
-        const item = await this.prisma.invoiceItem.findUnique({ where: { id: itemId } })
-        if (!item) continue
-
-        const hasPrice = item.unitPrice !== null && Number(item.unitPrice) > 0
-
-        if (item.ingredientId) {
-          // ── Ingrédient connu → met à jour le prix ──
-          if (hasPrice) {
-            const ingredient = await this.prisma.ingredient.findFirst({
-              where: { id: item.ingredientId, userId },
-            })
-            if (ingredient) {
-              await this.prisma.ingredient.update({
-                where: { id: item.ingredientId },
-                data: { currentPrice: item.unitPrice! },
-              })
-              await this.prisma.priceHistory.create({
-                data: { ingredientId: item.ingredientId, price: item.unitPrice!, source: 'invoice' },
-              })
-              updated++
-            }
-          }
-        } else if (!item.isConfirmed && hasPrice) {
-          // ── Aucune correspondance → crée automatiquement l'ingrédient ──
-          const cleanName = this._cleanRawName(item.rawName)
-          const newIngredient = await this.prisma.ingredient.create({
-            data: {
-              userId,
-              name: cleanName,
-              unit: item.unit ?? 'kg',
-              currentPrice: item.unitPrice!,
-              category: this._guessCategory(item.rawName),
-              priceHistory: {
-                create: { price: item.unitPrice!, source: 'invoice' },
-              },
-            },
-          })
-          await this.prisma.invoiceItem.update({
-            where: { id: itemId },
-            data: { ingredientId: newIngredient.id },
-          })
-          await this.matchingService.rememberMatch(userId, item.rawName, newIngredient.id)
-          created++
-        } else {
-          ignored++
-        }
-
         await this.prisma.invoiceItem.update({
           where: { id: itemId },
-          data: { isConfirmed: true },
+          data: { ingredientId },
+        })
+      }
+      if (userFactor !== undefined) {
+        await this.prisma.invoiceItem.update({
+          where: { id: itemId },
+          data: { conversionFactor: userFactor && userFactor > 0 ? userFactor : null },
         })
       }
 
-      // Passe la facture à "validated" si toutes les lignes sont confirmées
-      const pendingCount = await this.prisma.invoiceItem.count({
-        where: { invoiceId, isConfirmed: false },
+      // Récupère l'état final de l'item
+      const item = await this.prisma.invoiceItem.findUnique({ where: { id: itemId } })
+      if (!item) continue
+
+      const hasPrice = item.unitPrice !== null && Number(item.unitPrice) > 0
+      const storedFactor = item.conversionFactor != null ? Number(item.conversionFactor) : null
+
+      if (item.ingredientId) {
+        // ── Ingrédient connu → met à jour le prix, converti dans son unité ──
+        const ingredient = await this.prisma.ingredient.findFirst({
+          where: { id: item.ingredientId, userId },
+        })
+        if (ingredient && hasPrice) {
+          const resolved = this._pricePerIngredientUnit(
+            Number(item.unitPrice),
+            item.unit,
+            ingredient.unit,
+            storedFactor,
+          )
+          if (!resolved) {
+            // Ligne laissée en attente : l'utilisateur doit dire combien
+            // de kg (ou de L, de pièces) contient une unité de la facture
+            needsConversion.push({
+              itemId,
+              rawName: item.rawName,
+              invoiceUnit: item.unit,
+              ingredientName: ingredient.name,
+              ingredientUnit: ingredient.unit,
+            })
+            continue
+          }
+
+          if (!oldPrices.has(ingredient.id)) oldPrices.set(ingredient.id, Number(ingredient.currentPrice))
+          newPrices.set(ingredient.id, resolved.price)
+
+          await this.prisma.ingredient.update({
+            where: { id: ingredient.id },
+            data: { currentPrice: resolved.price },
+          })
+          await this.prisma.priceHistory.create({
+            data: { ingredientId: ingredient.id, price: resolved.price, source: 'invoice' },
+          })
+          updated++
+        }
+        if (ingredient && (ingredientId != null || userFactor !== undefined)) {
+          // Choix explicite de l'utilisateur : on l'apprend pour les prochaines factures
+          await this.matchingService.rememberMatch(userId, item.rawName, ingredient.id, storedFactor)
+        }
+      } else if (!item.isConfirmed && hasPrice) {
+        // ── Aucune correspondance → crée automatiquement l'ingrédient ──
+        const cleanName = this._cleanRawName(item.rawName)
+        const newIngredient = await this.prisma.ingredient.create({
+          data: {
+            userId,
+            name: cleanName,
+            unit: item.unit ?? 'kg',
+            currentPrice: item.unitPrice!,
+            category: this._guessCategory(item.rawName),
+            priceHistory: {
+              create: { price: item.unitPrice!, source: 'invoice' },
+            },
+          },
+        })
+        await this.prisma.invoiceItem.update({
+          where: { id: itemId },
+          data: { ingredientId: newIngredient.id },
+        })
+        await this.matchingService.rememberMatch(userId, item.rawName, newIngredient.id)
+        created++
+      } else {
+        ignored++
+      }
+
+      await this.prisma.invoiceItem.update({
+        where: { id: itemId },
+        data: { isConfirmed: true },
       })
-      if (pendingCount === 0) {
-        await this.prisma.invoice.update({
-          where: { id: invoiceId },
-          data: { status: 'validated' },
-        })
-      }
-
-      return { updated, created, ignored }
-    } catch (error) {
-      console.error(`[validateItems] Erreur facture #${invoiceId}:`, error)
-      throw error
     }
+
+    // Passe la facture à "validated" si toutes les lignes sont confirmées
+    const pendingCount = await this.prisma.invoiceItem.count({
+      where: { invoiceId, isConfirmed: false },
+    })
+    if (pendingCount === 0) {
+      await this.prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'validated' },
+      })
+    }
+
+    // Effet des nouveaux prix sur les plats (sous-recettes comprises)
+    const impact = newPrices.size
+      ? await this.recipesService.priceImpact(userId, newPrices, oldPrices)
+      : []
+    if (impact.length > 0) {
+      const label = invoice.supplierName ? `Facture ${invoice.supplierName}` : `Facture #${invoiceId}`
+      await this.notificationsService.notifyPriceImpact(userId, label, impact)
+    }
+
+    return { updated, created, ignored, needsConversion, impact }
   }
 
   private _cleanRawName(raw: string): string {
@@ -360,6 +436,8 @@ export class InvoicesService {
   }
 
   async rememberMatch(userId: number, rawName: string, ingredientId: number) {
+    const owned = await this.prisma.ingredient.count({ where: { id: ingredientId, userId } })
+    if (!owned) throw new NotFoundException('Ingrédient introuvable')
     await this.matchingService.rememberMatch(userId, rawName, ingredientId)
     return { ok: true }
   }

@@ -79,21 +79,45 @@ export class MatchingService {
     userId: number,
     rawName: string,
     ingredients: { id: number; name: string }[],
-  ): Promise<{ ingredientId: number | null; score: number; method: string }> {
+  ): Promise<{
+    ingredientId: number | null
+    score: number
+    method: string
+    conversionFactor?: number | null
+  }> {
     const memory = await this.prisma.invoiceMatchMemory.findUnique({
       where: { userId_rawName: { userId, rawName } },
     })
     if (memory) {
-      return { ingredientId: memory.ingredientId, score: 1, method: 'memory' }
+      return {
+        ingredientId: memory.ingredientId,
+        score: 1,
+        method: 'memory',
+        conversionFactor: memory.conversionFactor != null ? Number(memory.conversionFactor) : null,
+      }
     }
     return this.findBestMatch(rawName, ingredients)
   }
 
-  async rememberMatch(userId: number, rawName: string, ingredientId: number): Promise<void> {
+  /**
+   * Mémorise « ce nom de facture = cet ingrédient », et le cas échéant
+   * combien d'unités de l'ingrédient contient une unité de la facture
+   * (1 colis = 5 kg). Passer `undefined` conserve le facteur déjà mémorisé.
+   */
+  async rememberMatch(
+    userId: number,
+    rawName: string,
+    ingredientId: number,
+    conversionFactor?: number | null,
+  ): Promise<void> {
     await this.prisma.invoiceMatchMemory.upsert({
       where: { userId_rawName: { userId, rawName } },
-      update: { ingredientId, confirmedAt: new Date() },
-      create: { userId, rawName, ingredientId },
+      update: {
+        ingredientId,
+        confirmedAt: new Date(),
+        ...(conversionFactor !== undefined && { conversionFactor }),
+      },
+      create: { userId, rawName, ingredientId, conversionFactor: conversionFactor ?? null },
     })
   }
 }

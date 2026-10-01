@@ -267,6 +267,28 @@
       "showInactive": "Show removed dishes",
       "hideInactive": "Hide removed dishes",
       "excludedHint": "Removed dishes are excluded from averages and alerts."
+    },
+    "prep": {
+      "tabDishes": "Dishes",
+      "tabPreparations": "Prep recipes",
+      "add": "New prep recipe",
+      "createTitle": "New prep recipe",
+      "intro": "Sauces, stocks, doughs… A prep recipe isn't sold on its own: it's used like an ingredient in your dishes, and its cost follows its ingredients' prices automatically.",
+      "checkbox": "Prep recipe",
+      "checkboxHint": "Sauce, stock, dough… usable as an ingredient in other recipes, excluded from menu analysis.",
+      "yield": "Yield",
+      "yieldTooltip": "Quantity this recipe produces, e.g. 1.5 L of sauce. Used to compute the cost per litre or kilo.",
+      "portion": "portion",
+      "batchCost": "Batch cost",
+      "unitCost": "Unit cost",
+      "groupIngredients": "Ingredients",
+      "groupPreparations": "Prep recipes",
+      "badge": "prep",
+      "usedInHeader": "Used in",
+      "usedIn_zero": "Not used",
+      "usedIn_one": "Used in {{count}} recipe",
+      "usedIn_other": "Used in {{count}} recipes",
+      "unitMismatch": "Unit incompatible with the ingredient's unit: check this line."
     }
   },
   "invoices": {
@@ -350,6 +372,11 @@
       "displayed_one": "{{count}} invoice shown",
       "displayed_other": "{{count}} invoices shown",
       "noResults": "No invoices for these filters."
+    },
+    "conversion": {
+      "label": "\"{{invoiceUnit}}\" can't be converted to {{ingredient}}'s unit:",
+      "pending_one": "{{count}} line needs a unit conversion: enter how much one invoice unit contains, then validate again.",
+      "pending_other": "{{count}} lines need a unit conversion: enter how much one invoice unit contains, then validate again."
     }
   },
   "techSheets": {
@@ -563,5 +590,20 @@
       "disclaimer": "The advisor has access to all your real-time data.",
       "error": "Error in AI response."
     }
+  },
+  "impact": {
+    "title": "Impact on your dishes",
+    "modalTitle": "New price impact — {{name}}",
+    "preview": "See impact on my dishes",
+    "none": "No dish is affected by this change.",
+    "dish": "Dish",
+    "cost": "Food cost (€)",
+    "foodCost": "Food cost",
+    "price": "Suggested price",
+    "offMenu": "off menu",
+    "preparations": "Recalculated prep recipes:",
+    "suggestedHint": "Price that brings food cost back to {{pct}}%",
+    "footnote": "Suggested price: brings food cost back to its previous level, rounded up to the next 10 cents.",
+    "ok": "Got it"
   }
 }

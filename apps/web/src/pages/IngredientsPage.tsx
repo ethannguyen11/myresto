@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import { OrderSheetModal } from '../components/OrderSheetModal';
 import { LibraryModal } from '../components/LibraryModal';
+import { PriceImpactTable, type PriceImpactRow } from '../components/PriceImpactTable';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ function fmtDateTime(iso: string): string {
 
 // ── Modal shell ────────────────────────────────────────────────────────────
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, wide, onClose, children }: { title: string; wide?: boolean; onClose: () => void; children: React.ReactNode }) {
   const backdropRef = useRef<HTMLDivElement>(null);
   return (
     <div
@@ -79,7 +80,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       onMouseDown={(e) => { if (e.target === backdropRef.current) onClose(); }}
     >
       <div
-        className="w-full max-w-md rounded-2xl shadow-xl"
+        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-2xl shadow-xl`}
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--bg-border)' }}
       >
         <div
@@ -103,8 +104,10 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 // ── Ingredient form ────────────────────────────────────────────────────────
 
-function IngredientForm({ initial, onSave, onCancel }: {
+function IngredientForm({ initial, ingredientId, onSave, onCancel }: {
   initial: FormState;
+  /** Renseigné en édition : permet de prévisualiser l'impact d'un nouveau prix */
+  ingredientId?: number;
   onSave: (data: FormState) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -112,9 +115,30 @@ function IngredientForm({ initial, onSave, onCancel }: {
   const [form, setForm] = useState<FormState>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [preview, setPreview] = useState<PriceImpactRow[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const newPrice = parseFloat(form.currentPrice);
+  const priceChanged = ingredientId != null && newPrice >= 0 && newPrice !== parseFloat(initial.currentPrice);
+
+  async function loadPreview() {
+    setPreviewLoading(true);
+    try {
+      const res = await api.post<PriceImpactRow[]>('/recipes/price-impact', {
+        prices: [{ ingredientId, price: newPrice }],
+      });
+      setPreview(res.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message ?? t('common.error'));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
 
   function field(key: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (key === 'currentPrice') setPreview(null);
+      setForm((f) => ({ ...f, [key]: e.target.value }));
+    };
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -163,6 +187,23 @@ function IngredientForm({ initial, onSave, onCancel }: {
         <label style={labelStyle}>{t('ingredients.form.category')}</label>
         <input style={inputStyle} value={form.category} onChange={field('category')} placeholder={t('ingredients.form.categoryPlaceholder')} />
       </div>
+      {priceChanged && (
+        <div className="rounded-lg p-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
+          {preview ? (
+            <PriceImpactTable rows={preview} />
+          ) : (
+            <button
+              type="button"
+              onClick={loadPreview}
+              disabled={previewLoading}
+              className="text-sm font-medium disabled:opacity-60"
+              style={{ color: 'var(--accent)' }}
+            >
+              {previewLoading ? t('common.loading') : `📊 ${t('impact.preview')}`}
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex justify-end gap-2 pt-1">
         <button
           type="button"
@@ -272,10 +313,14 @@ function DeleteModal({ ingredient, onConfirm, onCancel }: {
 }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleConfirm() {
     setLoading(true);
-    try { await onConfirm(); } finally { setLoading(false); }
+    setError('');
+    try { await onConfirm(); }
+    catch (err: any) { setError(err.response?.data?.message ?? t('common.error')); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -283,6 +328,9 @@ function DeleteModal({ ingredient, onConfirm, onCancel }: {
       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         {t('ingredients.delete.message', { name: ingredient.name })}
       </p>
+      {error && (
+        <div className="mt-3 rounded-lg px-4 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)' }}>{error}</div>
+      )}
       <div className="mt-5 flex justify-end gap-2">
         <button
           onClick={onCancel}
@@ -318,7 +366,8 @@ type ActiveModal =
   | { type: 'create' }
   | { type: 'edit'; ingredient: Ingredient }
   | { type: 'delete'; ingredient: Ingredient }
-  | { type: 'history'; ingredient: Ingredient };
+  | { type: 'history'; ingredient: Ingredient }
+  | { type: 'impact'; name: string; rows: PriceImpactRow[] };
 
 export function IngredientsPage() {
   const { t } = useTranslation();
@@ -358,8 +407,10 @@ export function IngredientsPage() {
   }
 
   async function handleEdit(ingredient: Ingredient, form: FormState) {
-    await api.put(`/ingredients/${ingredient.id}`, { name: form.name, unit: form.unit, currentPrice: parseFloat(form.currentPrice), category: form.category || undefined });
-    setModal(null);
+    const res = await api.put<{ impact?: PriceImpactRow[] }>(`/ingredients/${ingredient.id}`, { name: form.name, unit: form.unit, currentPrice: parseFloat(form.currentPrice), category: form.category || undefined });
+    // Un changement de prix qui touche des plats : on montre l'effet tout de suite
+    const impact = res.data.impact ?? [];
+    setModal(impact.length > 0 ? { type: 'impact', name: form.name, rows: impact } : null);
     await load();
   }
 
@@ -676,12 +727,27 @@ export function IngredientsPage() {
         </Modal>
       )}
       {modal?.type === 'edit' && (
-        <Modal title={t('ingredients.form.editTitle', { name: modal.ingredient.name })} onClose={() => setModal(null)}>
+        <Modal title={t('ingredients.form.editTitle', { name: modal.ingredient.name })} wide onClose={() => setModal(null)}>
           <IngredientForm
+            ingredientId={modal.ingredient.id}
             initial={{ name: modal.ingredient.name, unit: modal.ingredient.unit, currentPrice: String(Number(modal.ingredient.currentPrice)), category: modal.ingredient.category ?? '' }}
             onSave={(form) => handleEdit(modal.ingredient, form)}
             onCancel={() => setModal(null)}
           />
+        </Modal>
+      )}
+      {modal?.type === 'impact' && (
+        <Modal title={t('impact.modalTitle', { name: modal.name })} wide onClose={() => setModal(null)}>
+          <PriceImpactTable rows={modal.rows} />
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-lg px-4 py-2 text-sm font-medium"
+              style={{ background: 'var(--accent)', color: '#000' }}
+            >
+              {t('impact.ok')}
+            </button>
+          </div>
         </Modal>
       )}
       {modal?.type === 'delete' && (

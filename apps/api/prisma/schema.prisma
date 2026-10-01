@@ -74,19 +74,29 @@ model Recipe {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  items        RecipeItem[]
+  // Préparation de base (sauce, fond, pâte) : utilisable comme ingrédient
+  // dans d'autres recettes, exclue de l'analyse du menu.
+  isPreparation    Boolean   @default(false)
+  yieldQuantity    Decimal?  // quantité produite par la recette (ex: 1.5)
+  yieldUnit        String?   // unité de cette quantité (ex: "L")
+  items        RecipeItem[] @relation("RecipeItems")
+  usedIn       RecipeItem[] @relation("SubRecipe")
 }
 
 // ===== INGREDIENTS D'UNE RECETTE =====
 
 model RecipeItem {
-  id           Int        @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   recipeId     Int
-  recipe       Recipe     @relation(fields: [recipeId], references: [id])
-  ingredientId Int
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
-  quantity     Decimal    // quantité en unité de l'ingrédient (ex: 0.200 kg)
-  notes        String?    // "pour la sauce", "garniture"
+  recipe       Recipe      @relation("RecipeItems", fields: [recipeId], references: [id])
+  // Une ligne pointe soit vers un ingrédient, soit vers une préparation
+  ingredientId Int?
+  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  subRecipeId  Int?
+  subRecipe    Recipe?     @relation("SubRecipe", fields: [subRecipeId], references: [id], onDelete: Restrict)
+  quantity     Decimal     // quantité dans `unit`
+  unit         String?     // null = unité de l'ingrédient (ou de rendement de la préparation)
+  notes        String?     // "pour la sauce", "garniture"
 }
 
 // ===== FACTURES =====
@@ -128,6 +138,9 @@ model InvoiceItem {
   isConfirmed    Boolean     @default(false) // validé par l'utilisateur
   matchScore     Float?      // score de similarité 0-1
   matchMethod    String?     // "auto" | "suggestion" | "memory" | "none"
+  // Nombre d'unités de l'ingrédient contenues dans 1 unité de la facture
+  // (ex: 1 colis = 5 kg → 5). Null = conversion automatique.
+  conversionFactor Decimal?
 }
 
 // ===== FICHES TECHNIQUES =====
@@ -158,6 +171,7 @@ model InvoiceMatchMemory {
   userId       Int
   rawName      String
   ingredientId Int
+  conversionFactor Decimal? // mémorisé avec la correspondance (colis → kg)
   confirmedAt  DateTime @default(now())
 
   @@unique([userId, rawName])

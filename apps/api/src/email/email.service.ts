@@ -1,12 +1,16 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { RecipesService } from '../recipes/recipes.service'
 
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name)
   private resend: any = null
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private recipesService: RecipesService,
+  ) {
     const apiKey = process.env.RESEND_API_KEY
     if (apiKey && apiKey !== 're_xxx') {
       try {
@@ -59,25 +63,16 @@ export class EmailService implements OnModuleInit {
     const user = await this.prisma.user.findUnique({ where: { id: userId } })
     if (!user) return { sent: false, reason: 'User not found' }
 
-    const recipes = await this.prisma.recipe.findMany({
-      // Seuls les plats à la carte comptent dans le rapport de rentabilité
-      where: { userId, isActive: true },
-      include: {
-        items: {
-          include: { ingredient: true },
-        },
-      },
-    })
-
-    // Compute food costs
-    const recipesWithFc = recipes.map((r) => {
-      const totalCost = r.items.reduce((sum, item) => {
-        return sum + Number(item.quantity) * Number(item.ingredient.currentPrice)
-      }, 0)
-      const sellingPrice = Number(r.sellingPrice)
-      const fcPct = sellingPrice > 0 ? (totalCost / sellingPrice) * 100 : 0
-      return { name: r.name, category: r.category, fcPct: Math.round(fcPct * 10) / 10, sellingPrice, totalCost }
-    })
+    // Seuls les plats à la carte comptent (ni plats retirés, ni préparations).
+    // Le coût vient du moteur commun : sous-recettes et unités comprises.
+    const recipes = await this.recipesService.findAll(userId, true)
+    const recipesWithFc = recipes.map((r) => ({
+      name: r.name,
+      category: r.category,
+      fcPct: Math.round(r.foodCost.foodCostPercent * 10) / 10,
+      sellingPrice: r.foodCost.sellingPrice,
+      totalCost: r.foodCost.ingredientCost,
+    }))
 
     const avgFc = recipesWithFc.length
       ? recipesWithFc.reduce((s, r) => s + r.fcPct, 0) / recipesWithFc.length

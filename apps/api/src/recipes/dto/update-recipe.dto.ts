@@ -10,5 +10,8 @@ export class UpdateRecipeDto {
   servings?: number
   wastagePercent?: number
   isActive?: boolean
+  isPreparation?: boolean
+  yieldQuantity?: number | null
+  yieldUnit?: string | null
   items?: RecipeItemDto[]
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import type { PriceImpactRow } from '../recipes/recipes.service'
 
 @Injectable()
 export class NotificationsService {
@@ -64,5 +65,29 @@ export class NotificationsService {
     return this.prisma.notification.create({
       data: { userId, type, title, message },
     })
+  }
+
+  /**
+   * Notifie l'effet d'un changement de prix sur les plats à la carte.
+   * Rien n'est créé si aucun plat actif ne voit son food cost monter.
+   */
+  async notifyPriceImpact(userId: number, cause: string, rows: PriceImpactRow[]) {
+    const hit = rows.filter(
+      (r) => !r.isPreparation && r.isActive && r.foodCostAfter > r.foodCostBefore,
+    )
+    if (hit.length === 0) return null
+
+    const top = hit
+      .slice(0, 3)
+      .map((r) => `${r.name} ${r.foodCostBefore}% → ${r.foodCostAfter}%`)
+      .join(' · ')
+    const more = hit.length > 3 ? ` (+${hit.length - 3} autre${hit.length > 4 ? 's' : ''})` : ''
+
+    return this.create(
+      userId,
+      'price_increase',
+      `📈 ${cause} : ${hit.length} plat${hit.length > 1 ? 's' : ''} impacté${hit.length > 1 ? 's' : ''}`,
+      `${top}${more}`,
+    )
   }
 }

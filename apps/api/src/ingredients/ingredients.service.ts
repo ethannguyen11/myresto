@@ -1,11 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { RecipesService } from '../recipes/recipes.service'
+import { NotificationsService } from '../notifications/notifications.service'
+import { areCompatible } from '../recipes/units'
 import { CreateIngredientDto } from './dto/create-ingredient.dto'
 import { UpdateIngredientDto } from './dto/update-ingredient.dto'
 
 @Injectable()
 export class IngredientsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private recipesService: RecipesService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   // Récupère tous les ingrédients d'un utilisateur
   async findAll(userId: number) {
@@ -59,22 +71,51 @@ export class IngredientsService {
     return ingredient
   }
 
-  // Met à jour un ingrédient
+  /**
+   * Met à jour un ingrédient.
+   *
+   * Si le prix change, la réponse porte `impact` : les plats dont le coût
+   * bouge, avec leur food cost avant/après et un prix de vente conseillé.
+   * Une notification est créée quand des plats à la carte sont touchés.
+   */
   async update(id: number, userId: number, dto: UpdateIngredientDto) {
     const ingredient = await this.findOne(id, userId)
 
-    // Si le prix change, on l'enregistre dans l'historique
-    if (dto.currentPrice && dto.currentPrice !== Number(ingredient.currentPrice)) {
+    // Changer d'unité ne doit pas rendre incohérentes les recettes qui dosent
+    // cet ingrédient dans une unité explicite (200 g → passage en « pièce »)
+    if (dto.unit && dto.unit !== ingredient.unit) {
+      const usages = await this.prisma.recipeItem.findMany({
+        where: { ingredientId: id, unit: { not: null } },
+        include: { recipe: { select: { name: true } } },
+      })
+      const broken = usages.filter((u) => !areCompatible(u.unit, dto.unit))
+      if (broken.length > 0) {
+        throw new BadRequestException(
+          `Impossible de passer en ${dto.unit} : ${[...new Set(broken.map((u) => u.recipe.name))].join(', ')} ` +
+            `dose${broken.length > 1 ? 'nt' : ''} cet ingrédient en ${broken[0].unit}.`,
+        )
+      }
+    }
+
+    const priceChanged =
+      dto.currentPrice != null && Number(dto.currentPrice) !== Number(ingredient.currentPrice)
+
+    // L'impact se calcule avant l'écriture, tant que l'ancien prix est en base
+    const impact = priceChanged
+      ? await this.recipesService.priceImpact(userId, new Map([[id, Number(dto.currentPrice)]]))
+      : []
+
+    if (priceChanged) {
       await this.prisma.priceHistory.create({
         data: {
           ingredientId: id,
-          price: dto.currentPrice,
+          price: dto.currentPrice!,
           source: 'manual',
         },
       })
     }
 
-    return this.prisma.ingredient.update({
+    const updated = await this.prisma.ingredient.update({
       where: { id },
       data: {
         name: dto.name,
@@ -83,12 +124,35 @@ export class IngredientsService {
         category: dto.category,
       },
     })
+
+    if (impact.length > 0) {
+      await this.notificationsService.notifyPriceImpact(userId, `Prix de ${updated.name}`, impact)
+    }
+
+    return { ...updated, impact }
   }
 
-  // Supprime un ingrédient
+  // Supprime un ingrédient — refusé s'il entre dans une recette
   async remove(id: number, userId: number) {
     await this.findOne(id, userId)
-    return this.prisma.ingredient.delete({ where: { id } })
+    const usages = await this.prisma.recipeItem.findMany({
+      where: { ingredientId: id },
+      include: { recipe: { select: { name: true } } },
+    })
+    if (usages.length > 0) {
+      const names = [...new Set(usages.map((u) => u.recipe.name))]
+      throw new ConflictException(
+        `Cet ingrédient est utilisé dans : ${names.join(', ')}. Retirez-le de ces recettes d'abord.`,
+      )
+    }
+    // L'historique de prix et les lignes de facture le référencent aussi
+    await this.prisma.$transaction([
+      this.prisma.priceHistory.deleteMany({ where: { ingredientId: id } }),
+      this.prisma.invoiceItem.updateMany({ where: { ingredientId: id }, data: { ingredientId: null } }),
+      this.prisma.invoiceMatchMemory.deleteMany({ where: { ingredientId: id, userId } }),
+      this.prisma.ingredient.delete({ where: { id } }),
+    ])
+    return { id }
   }
 
   // Retourne les ingrédients groupés par catégorie pour la fiche de commande

@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
+import { conversionFactor, normalizeUnit, unitChoices } from '../lib/units';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface Ingredient { id: number; name: string; unit: string; currentPrice: number; }
-interface RecipeItem { id: number; ingredientId: number; quantity: number; ingredient: Ingredient; }
+interface SubRecipeRef { id: number; name: string; yieldQuantity: number | null; yieldUnit: string | null; }
+interface RecipeItem {
+  id: number; ingredientId: number | null; subRecipeId: number | null; quantity: number;
+  unit: string | null; ingredient: Ingredient | null; subRecipe: SubRecipeRef | null;
+}
+interface CostLine {
+  kind: 'ingredient' | 'preparation'; refId: number; name: string;
+  quantity: number; unit: string | null; cost: number; unitMismatch: boolean;
+}
 interface FoodCost {
   totalCost: number; ingredientCost: number; ingredientCostWithWaste: number;
   totalRealCost: number; sellingPrice: number; foodCostPercent: number;
@@ -16,18 +25,28 @@ interface Recipe {
   id: number; name: string; category: string | null; sellingPrice: number;
   notes: string | null; prepTimeMinutes: number | null; servings: number | null;
   wastagePercent: number | null; isActive: boolean; items: RecipeItem[]; foodCost: FoodCost;
+  isPreparation: boolean; yieldQuantity: number | null; yieldUnit: string | null;
+  costLines: CostLine[]; unitCost: number | null; unitCostUnit: string | null;
+  usedIn: { id: number; name: string }[];
 }
-interface ItemRow { ingredientId: string; quantity: string; }
+// ref : "i:<id>" pour un ingrédient, "p:<id>" pour une préparation
+interface ItemRow { ref: string; quantity: string; unit: string; }
 interface RecipeForm {
   name: string; category: string; sellingPrice: string; prepTimeMinutes: string;
   servings: string; wastagePercent: string; notes: string; items: ItemRow[];
+  isPreparation: boolean; yieldQuantity: string; yieldUnit: string;
 }
+
+const EMPTY_ROW: ItemRow = { ref: '', quantity: '', unit: '' };
 
 const EMPTY_FORM: RecipeForm = {
   name: '', category: '', sellingPrice: '', prepTimeMinutes: '',
   servings: '1', wastagePercent: '0', notes: '',
-  items: [{ ingredientId: '', quantity: '' }],
+  items: [EMPTY_ROW],
+  isPreparation: false, yieldQuantity: '', yieldUnit: 'kg',
 };
+
+const EMPTY_PREP_FORM: RecipeForm = { ...EMPTY_FORM, isPreparation: true };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -53,16 +72,46 @@ function ragLeftBorder(status: 'green' | 'amber' | 'red'): string {
   return 'var(--red)';
 }
 
-function calcFoodCost(items: ItemRow[], sellingPriceStr: string, ingredientMap: Map<number, Ingredient>, wastageStr: string) {
+/** Unité dans laquelle une préparation est dosée (null = portion) */
+function prepBaseUnit(p: { yieldQuantity: number | null; yieldUnit: string | null }): string | null {
+  return Number(p.yieldQuantity ?? 0) > 0 ? p.yieldUnit : null;
+}
+
+/** L'option de la liste d'unités qui correspond à l'unité de base (« Kg » → « kg ») */
+function defaultUnit(base: string | null | undefined): string {
+  if (!base) return '';
+  return unitChoices(base).find((u) => normalizeUnit(u) === normalizeUnit(base)) ?? base;
+}
+
+interface RefLookup { ingredients: Map<number, Ingredient>; preparations: Map<number, Recipe>; }
+
+/** Référence d'une ligne : son nom, son unité de base et son prix par unité de base */
+function resolveRef(ref: string, lookup: RefLookup) {
+  const [kind, raw] = ref.split(':');
+  const id = parseInt(raw);
+  if (kind === 'i') {
+    const ing = lookup.ingredients.get(id);
+    return ing ? { baseUnit: ing.unit as string | null, unitPrice: Number(ing.currentPrice) } : null;
+  }
+  if (kind === 'p') {
+    const prep = lookup.preparations.get(id);
+    return prep ? { baseUnit: prepBaseUnit(prep), unitPrice: Number(prep.unitCost ?? 0) } : null;
+  }
+  return null;
+}
+
+function lineCost(row: ItemRow, lookup: RefLookup): number {
+  const target = resolveRef(row.ref, lookup);
+  const qty = parseFloat(row.quantity);
+  if (!target || !qty || qty <= 0) return 0;
+  const factor = row.unit ? conversionFactor(row.unit, target.baseUnit) : 1;
+  return qty * (factor ?? 1) * target.unitPrice;
+}
+
+function calcFoodCost(items: ItemRow[], sellingPriceStr: string, lookup: RefLookup, wastageStr: string) {
   const selling = parseFloat(sellingPriceStr);
   if (!selling || selling <= 0) return null;
-  let ingredientCost = 0;
-  for (const row of items) {
-    const ing = ingredientMap.get(parseInt(row.ingredientId));
-    const qty = parseFloat(row.quantity);
-    if (!ing || !qty || qty <= 0) continue;
-    ingredientCost += Number(ing.currentPrice) * qty;
-  }
+  const ingredientCost = items.reduce((sum, row) => sum + lineCost(row, lookup), 0);
   const wastage = (parseFloat(wastageStr) || 0) / 100;
   const totalRealCost = ingredientCost * (1 + wastage);
   return {
@@ -102,9 +151,33 @@ function Modal({ title, wide, onClose, children }: { title: string; wide?: boole
 
 // ── Food cost preview ──────────────────────────────────────────────────────
 
-function FoodCostPreview({ form, ingredientMap }: { form: RecipeForm; ingredientMap: Map<number, Ingredient> }) {
+function PreparationPreview({ form, lookup }: { form: RecipeForm; lookup: RefLookup }) {
   const { t } = useTranslation();
-  const result = calcFoodCost(form.items, form.sellingPrice, ingredientMap, form.wastagePercent);
+  const batchCost = form.items.reduce((sum, row) => sum + lineCost(row, lookup), 0);
+  if (batchCost <= 0) return null;
+  const yieldQty = parseFloat(form.yieldQuantity);
+  const unitLabel = yieldQty > 0 ? form.yieldUnit : t('recipes.prep.portion');
+  const perUnit = yieldQty > 0 ? batchCost / yieldQty : batchCost;
+  return (
+    <div className="rounded-xl px-4 py-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <p className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>{t('recipes.prep.batchCost')}</p>
+          <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{fmt(batchCost)} €</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>{t('recipes.prep.unitCost')}</p>
+          <p className="font-semibold" style={{ color: 'var(--accent)' }}>{fmt(perUnit)} € / {unitLabel}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FoodCostPreview({ form, lookup }: { form: RecipeForm; lookup: RefLookup }) {
+  const { t } = useTranslation();
+  if (form.isPreparation) return <PreparationPreview form={form} lookup={lookup} />;
+  const result = calcFoodCost(form.items, form.sellingPrice, lookup, form.wastagePercent);
   if (!result) return null;
   const { ingredientCost, totalRealCost, foodCostPct, realCostPct, profit, realProfit } = result;
   return (
@@ -175,18 +248,23 @@ function Tooltip({ text }: { text: string }) {
 
 // ── Recipe form modal ──────────────────────────────────────────────────────
 
-function RecipeFormModal({ initial, ingredients, title, onSave, onClose }: {
-  initial: RecipeForm; ingredients: Ingredient[]; title: string;
+function RecipeFormModal({ initial, ingredients, preparations, editingId, title, onSave, onClose }: {
+  initial: RecipeForm; ingredients: Ingredient[]; preparations: Recipe[]; editingId?: number; title: string;
   onSave: (form: RecipeForm) => Promise<void>; onClose: () => void;
 }) {
   const { t } = useTranslation();
   const [form, setForm] = useState<RecipeForm>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const ingredientMap = new Map(ingredients.map((i) => [i.id, i]));
+  // Une préparation ne peut pas se contenir elle-même (l'API refuse aussi les boucles indirectes)
+  const usablePreps = preparations.filter((p) => p.id !== editingId);
+  const lookup: RefLookup = {
+    ingredients: new Map(ingredients.map((i) => [i.id, i])),
+    preparations: new Map(usablePreps.map((p) => [p.id, p])),
+  };
 
-  function setField(key: keyof Omit<RecipeForm, 'items'>) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  function setField(key: 'name' | 'category' | 'sellingPrice' | 'prepTimeMinutes' | 'servings' | 'wastagePercent' | 'notes' | 'yieldQuantity' | 'yieldUnit') {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
   }
   function setItemField(idx: number, key: keyof ItemRow, value: string) {
@@ -196,13 +274,22 @@ function RecipeFormModal({ initial, ingredients, title, onSave, onClose }: {
       return { ...f, items };
     });
   }
-  function addItem() { setForm((f) => ({ ...f, items: [...f.items, { ingredientId: '', quantity: '' }] })); }
+  function setItemRef(idx: number, ref: string) {
+    // Nouvelle cible : on repart de son unité de base
+    setForm((f) => {
+      const items = [...f.items];
+      const base = resolveRef(ref, lookup)?.baseUnit ?? null;
+      items[idx] = { ...items[idx], ref, unit: defaultUnit(base) };
+      return { ...f, items };
+    });
+  }
+  function addItem() { setForm((f) => ({ ...f, items: [...f.items, EMPTY_ROW] })); }
   function removeItem(idx: number) { setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) })); }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const validItems = form.items.filter((r) => r.ingredientId && r.quantity);
+    const validItems = form.items.filter((r) => r.ref && r.quantity);
     if (validItems.length === 0) { setError(t('recipes.form.atLeastOne')); return; }
     setSubmitting(true);
     try { await onSave({ ...form, items: validItems }); }
@@ -237,12 +324,39 @@ function RecipeFormModal({ initial, ingredients, title, onSave, onClose }: {
             <label style={labelStyle}>{t('recipes.form.category')}</label>
             <input style={inputStyle} value={form.category} onChange={setField('category')} placeholder={t('recipes.form.categoryPlaceholder')} />
           </div>
-          <div>
-            <label style={labelStyle}>{t('recipes.form.sellingPrice')}</label>
-            <input style={inputStyle} required type="number" min="0" step="0.01" value={form.sellingPrice} onChange={setField('sellingPrice')} placeholder="0,00" />
-          </div>
+          {form.isPreparation ? (
+            <div>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center' }}>
+                {t('recipes.prep.yield')}
+                <Tooltip text={t('recipes.prep.yieldTooltip')} />
+              </label>
+              <div className="flex gap-2">
+                <input style={{ ...inputStyle, flex: 1 }} type="number" min="0" step="0.001" value={form.yieldQuantity} onChange={setField('yieldQuantity')} placeholder="1,5" />
+                <select style={{ ...inputStyle, width: 90 }} value={form.yieldUnit} onChange={setField('yieldUnit')}>
+                  {['kg', 'g', 'L', 'cl', 'pièce'].map((u) => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label style={labelStyle}>{t('recipes.form.sellingPrice')}</label>
+              <input style={inputStyle} required type="number" min="0" step="0.01" value={form.sellingPrice} onChange={setField('sellingPrice')} placeholder="0,00" />
+            </div>
+          )}
+          <label className="col-span-2 flex cursor-pointer items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={form.isPreparation}
+              onChange={(e) => setForm((f) => ({ ...f, isPreparation: e.target.checked }))}
+            />
+            <span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{t('recipes.prep.checkbox')}</span>
+              <span className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>{t('recipes.prep.checkboxHint')}</span>
+            </span>
+          </label>
         </div>
-        <div className="rounded-xl p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
+        {!form.isPreparation && <div className="rounded-xl p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>Coûts réels</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -261,7 +375,7 @@ function RecipeFormModal({ initial, ingredients, title, onSave, onClose }: {
               <input style={inputStyle} type="number" min="0" max="100" step="0.1" value={form.wastagePercent} onChange={setField('wastagePercent')} placeholder="0" />
             </div>
           </div>
-        </div>
+        </div>}
         <div>
           <div className="mb-2 flex items-center justify-between">
             <label style={{ ...labelStyle, marginBottom: 0 }}>{t('recipes.form.ingredients')}</label>
@@ -275,44 +389,69 @@ function RecipeFormModal({ initial, ingredients, title, onSave, onClose }: {
             </button>
           </div>
           <div className="space-y-2">
-            {form.items.map((row, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <select
-                  value={row.ingredientId}
-                  onChange={(e) => setItemField(idx, 'ingredientId', e.target.value)}
-                  style={{ ...inputStyle, flex: 1, width: 'auto' }}
-                >
-                  <option value="">{t('recipes.form.chooseIngredient')}</option>
-                  {ingredients.map((ing) => (
-                    <option key={ing.id} value={ing.id}>
-                      {ing.name} ({ing.unit}) — {fmt(Number(ing.currentPrice))} €
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number" min="0" step="0.001"
-                  value={row.quantity}
-                  onChange={(e) => setItemField(idx, 'quantity', e.target.value)}
-                  placeholder={t('recipes.form.qtyPlaceholder')}
-                  style={{ ...inputStyle, width: 96 }}
-                />
-                <span className="w-10 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  {ingredientMap.get(parseInt(row.ingredientId))?.unit ?? ''}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeItem(idx)}
-                  disabled={form.items.length === 1}
-                  className="rounded-md p-1.5 transition-colors disabled:opacity-30"
-                  style={{ color: 'var(--text-tertiary)' }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+            {form.items.map((row, idx) => {
+              const base = resolveRef(row.ref, lookup)?.baseUnit ?? null;
+              const choices = base ? unitChoices(base) : [];
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <select
+                    value={row.ref}
+                    onChange={(e) => setItemRef(idx, e.target.value)}
+                    style={{ ...inputStyle, flex: 1, width: 'auto', minWidth: 0 }}
+                  >
+                    <option value="">{t('recipes.form.chooseIngredient')}</option>
+                    <optgroup label={t('recipes.prep.groupIngredients')}>
+                      {ingredients.map((ing) => (
+                        <option key={`i${ing.id}`} value={`i:${ing.id}`}>
+                          {ing.name} — {fmt(Number(ing.currentPrice))} €/{ing.unit}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {usablePreps.length > 0 && (
+                      <optgroup label={t('recipes.prep.groupPreparations')}>
+                        {usablePreps.map((p) => (
+                          <option key={`p${p.id}`} value={`p:${p.id}`}>
+                            {p.name} — {fmt(Number(p.unitCost ?? 0))} €/{p.unitCostUnit ?? t('recipes.prep.portion')}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <input
+                    type="number" min="0" step="0.001"
+                    value={row.quantity}
+                    onChange={(e) => setItemField(idx, 'quantity', e.target.value)}
+                    placeholder={t('recipes.form.qtyPlaceholder')}
+                    style={{ ...inputStyle, width: 88 }}
+                  />
+                  {choices.length > 1 ? (
+                    <select
+                      value={row.unit}
+                      onChange={(e) => setItemField(idx, 'unit', e.target.value)}
+                      style={{ ...inputStyle, width: 76, padding: '8px 6px' }}
+                    >
+                      {choices.map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  ) : (
+                    <span className="w-[76px] text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      {row.ref ? (choices[0] ?? t('recipes.prep.portion')) : ''}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    disabled={form.items.length === 1}
+                    className="rounded-md p-1.5 transition-colors disabled:opacity-30"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <FoodCostPreview form={form} ingredientMap={ingredientMap} />
+        <FoodCostPreview form={form} lookup={lookup} />
         <div>
           <label style={labelStyle}>{t('recipes.form.notes')}</label>
           <textarea
@@ -360,6 +499,7 @@ function CostDetailModal({ recipe, onClose }: { recipe: Recipe; onClose: () => v
   ];
   return (
     <Modal title={t('recipes.detail.title', { name: recipe.name })} onClose={onClose}>
+      <CostLinesTable lines={recipe.costLines} />
       <div className="space-y-1">
         {rows.map(({ label, value, bold }) => (
           <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid var(--bg-border)' }}>
@@ -381,15 +521,59 @@ function CostDetailModal({ recipe, onClose }: { recipe: Recipe; onClose: () => v
   );
 }
 
+// ── Lignes de coût (ingrédients et préparations) ───────────────────────────
+
+function CostLinesTable({ lines }: { lines: CostLine[] }) {
+  const { t } = useTranslation();
+  if (lines.length === 0) return null;
+  return (
+    <div className="mb-4 overflow-hidden rounded-lg" style={{ border: '1px solid var(--bg-border)', background: 'var(--bg-tertiary)' }}>
+      {lines.map((l, i) => (
+        <div
+          key={i}
+          className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+          style={{ borderBottom: i < lines.length - 1 ? '1px solid var(--bg-border)' : 'none' }}
+        >
+          <div className="min-w-0">
+            <span style={{ color: 'var(--text-primary)' }}>{l.name}</span>
+            {l.kind === 'preparation' && (
+              <span className="ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
+                {t('recipes.prep.badge')}
+              </span>
+            )}
+            <span className="ml-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {fmt(l.quantity, 3).replace(/,?0+$/, '')} {l.unit ?? t('recipes.prep.portion')}
+            </span>
+            {l.unitMismatch && (
+              <span className="ml-2 text-xs" style={{ color: 'var(--red)' }} title={t('recipes.prep.unitMismatch')}>⚠</span>
+            )}
+          </div>
+          <span className="flex-none font-medium" style={{ color: 'var(--text-secondary)' }}>{fmt(l.cost)} €</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Delete confirm ─────────────────────────────────────────────────────────
 
 function DeleteModal({ recipe, onConfirm, onCancel }: { recipe: Recipe; onConfirm: () => Promise<void>; onCancel: () => void }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  async function go() { setLoading(true); try { await onConfirm(); } finally { setLoading(false); } }
+  const [error, setError] = useState('');
+  async function go() {
+    setLoading(true);
+    setError('');
+    try { await onConfirm(); }
+    catch (err: any) { setError(err.response?.data?.message ?? t('common.error')); }
+    finally { setLoading(false); }
+  }
   return (
     <Modal title={t('common.confirmDelete')} onClose={onCancel}>
       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t('recipes.delete.message', { name: recipe.name })}</p>
+      {error && (
+        <div className="mt-3 rounded-lg px-4 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--red)' }}>{error}</div>
+      )}
       <div className="mt-5 flex justify-end gap-2">
         <button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm" style={{ border: '1px solid var(--bg-border)', color: 'var(--text-secondary)' }}>{t('common.cancel')}</button>
         <button onClick={go} disabled={loading} className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60" style={{ background: 'var(--red)', color: '#fff' }}>
@@ -430,11 +614,11 @@ function SummaryBanner({ recipes }: { recipes: Recipe[] }) {
 function RecipeMobileDetailSheet({ recipe, onEdit, onToggleActive, onClose }: { recipe: Recipe; onEdit: () => void; onToggleActive: () => void; onClose: () => void }) {
   const { t } = useTranslation();
   const fc = recipe.foodCost;
-  const itemCosts = recipe.items.map((item) => ({
-    name: item.ingredient.name,
-    unit: item.ingredient.unit,
-    quantity: Number(item.quantity),
-    cost: Number(item.quantity) * Number(item.ingredient.currentPrice),
+  const itemCosts = recipe.costLines.map((l) => ({
+    name: l.name,
+    unit: l.unit ?? t('recipes.prep.portion'),
+    quantity: Number(l.quantity),
+    cost: l.cost,
   }));
   const hasWastage = fc.ingredientCostWithWaste !== fc.ingredientCost;
   const wastageCost = fc.ingredientCostWithWaste - fc.ingredientCost;
@@ -585,8 +769,15 @@ function recipeToForm(r: Recipe): RecipeForm {
     wastagePercent: r.wastagePercent != null ? String(Number(r.wastagePercent)) : '0',
     notes: r.notes ?? '',
     items: r.items.length
-      ? r.items.map((it) => ({ ingredientId: String(it.ingredientId), quantity: String(Number(it.quantity)) }))
-      : [{ ingredientId: '', quantity: '' }],
+      ? r.items.map((it) => ({
+          ref: it.subRecipeId != null ? `p:${it.subRecipeId}` : `i:${it.ingredientId}`,
+          quantity: String(Number(it.quantity)),
+          unit: defaultUnit(it.unit ?? (it.subRecipe ? prepBaseUnit(it.subRecipe) : it.ingredient?.unit)),
+        }))
+      : [EMPTY_ROW],
+    isPreparation: r.isPreparation,
+    yieldQuantity: r.yieldQuantity != null ? String(Number(r.yieldQuantity)) : '',
+    yieldUnit: r.yieldUnit ?? 'kg',
   };
 }
 
@@ -598,6 +789,7 @@ export function RecipesPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ActiveModal | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [view, setView] = useState<'dishes' | 'preparations'>('dishes');
 
   async function load() {
     try {
@@ -617,15 +809,23 @@ export function RecipesPage() {
     return {
       name: form.name,
       category: form.category || undefined,
-      sellingPrice: parseFloat(form.sellingPrice),
+      sellingPrice: form.isPreparation ? 0 : parseFloat(form.sellingPrice),
+      isPreparation: form.isPreparation,
+      yieldQuantity: form.isPreparation && form.yieldQuantity ? parseFloat(form.yieldQuantity) : null,
+      yieldUnit: form.isPreparation ? form.yieldUnit : null,
       prepTimeMinutes: form.prepTimeMinutes ? parseInt(form.prepTimeMinutes) : undefined,
       servings: form.servings ? parseInt(form.servings) : 1,
       wastagePercent: parseFloat(form.wastagePercent) || 0,
       notes: form.notes || undefined,
-      items: form.items.filter((r) => r.ingredientId && r.quantity).map((r) => ({
-        ingredientId: parseInt(r.ingredientId),
-        quantity: parseFloat(r.quantity),
-      })),
+      items: form.items.filter((r) => r.ref && r.quantity).map((r) => {
+        const [kind, id] = r.ref.split(':');
+        return {
+          ingredientId: kind === 'i' ? parseInt(id) : null,
+          subRecipeId: kind === 'p' ? parseInt(id) : null,
+          quantity: parseFloat(r.quantity),
+          unit: r.unit || null,
+        };
+      }),
     };
   }
 
@@ -639,10 +839,13 @@ export function RecipesPage() {
     await load();
   }
 
-  // Les plats retirés de la carte sont exclus des moyennes, comme côté API.
-  const activeRecipes = recipes.filter((r) => r.isActive);
-  const inactiveCount = recipes.length - activeRecipes.length;
-  const visibleRecipes = showInactive ? recipes : activeRecipes;
+  // Les plats retirés de la carte et les préparations sont exclus des moyennes, comme côté API.
+  const dishes = recipes.filter((r) => !r.isPreparation);
+  const preparations = recipes.filter((r) => r.isPreparation);
+  const activeRecipes = dishes.filter((r) => r.isActive);
+  const inactiveCount = dishes.length - activeRecipes.length;
+  const isPrepView = view === 'preparations';
+  const visibleRecipes = isPrepView ? preparations : showInactive ? dishes : activeRecipes;
 
   if (loading) {
     return (
@@ -668,8 +871,22 @@ export function RecipesPage() {
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('recipes.title')}</h1>
             <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{t('recipes.subtitle', { count: activeRecipes.length })}</p>
           </div>
-          <div className="flex items-center gap-2">
-            {inactiveCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-lg p-0.5" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--bg-border)' }}>
+              {(['dishes', 'preparations'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                  style={view === v
+                    ? { background: 'var(--bg-secondary)', color: 'var(--text-primary)' }
+                    : { color: 'var(--text-tertiary)' }}
+                >
+                  {v === 'dishes' ? t('recipes.prep.tabDishes') : `${t('recipes.prep.tabPreparations')} (${preparations.length})`}
+                </button>
+              ))}
+            </div>
+            {!isPrepView && inactiveCount > 0 && (
               <button
                 onClick={() => setShowInactive((v) => !v)}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
@@ -687,13 +904,17 @@ export function RecipesPage() {
               style={{ background: 'var(--accent)', color: '#000' }}
             >
               <span className="text-base leading-none">+</span>
-              {t('recipes.add')}
+              {isPrepView ? t('recipes.prep.add') : t('recipes.add')}
             </button>
           </div>
         </div>
 
         {/* Les moyennes ne portent que sur les plats à la carte */}
-        <SummaryBanner recipes={activeRecipes} />
+        {isPrepView ? (
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t('recipes.prep.intro')}</p>
+        ) : (
+          <SummaryBanner recipes={activeRecipes} />
+        )}
 
         {visibleRecipes.length === 0 ? (
           <div
@@ -723,7 +944,7 @@ export function RecipesPage() {
                   style={{
                     background: 'var(--bg-secondary)',
                     border: '1px solid var(--bg-border)',
-                    borderLeft: `4px solid ${ragLeftBorder(r.foodCost.ragStatus)}`,
+                    borderLeft: `4px solid ${r.isPreparation ? '#818cf8' : ragLeftBorder(r.foodCost.ragStatus)}`,
                     opacity: r.isActive ? 1 : 0.5,
                   }}
                 >
@@ -736,22 +957,31 @@ export function RecipesPage() {
                         </span>
                       )}
                     </p>
-                    <span
-                      className="flex-none rounded-full px-2 py-0.5 text-xs font-semibold"
-                      style={{ background: fcBg(r.foodCost.foodCostPercent), color: fcColor(r.foodCost.foodCostPercent) }}
-                    >
-                      {fmt(r.foodCost.foodCostPercent, 1)} %
-                    </span>
+                    {r.isPreparation ? (
+                      <span className="flex-none text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+                        {fmt(Number(r.unitCost ?? 0))} €/{r.unitCostUnit}
+                      </span>
+                    ) : (
+                      <span
+                        className="flex-none rounded-full px-2 py-0.5 text-xs font-semibold"
+                        style={{ background: fcBg(r.foodCost.foodCostPercent), color: fcColor(r.foodCost.foodCostPercent) }}
+                      >
+                        {fmt(r.foodCost.foodCostPercent, 1)} %
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    {[r.category, t('recipes.table.ingredientCount', { count: r.items.length }), `${fmt(Number(r.sellingPrice))} €`].filter(Boolean).join(' · ')}
+                    {(r.isPreparation
+                      ? [r.category, t('recipes.table.ingredientCount', { count: r.items.length }), t('recipes.prep.usedIn', { count: r.usedIn.length })]
+                      : [r.category, t('recipes.table.ingredientCount', { count: r.items.length }), `${fmt(Number(r.sellingPrice))} €`]
+                    ).filter(Boolean).join(' · ')}
                   </p>
-                  <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--green)' }}>
+                  {!r.isPreparation && <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--green)' }}>
                     +{fmt(r.foodCost.profitPerDish)} €{' '}
                     <span className="text-xs font-normal" style={{ color: 'var(--text-tertiary)' }}>
                       {t('recipes.mobile.profitPerDish')}
                     </span>
-                  </p>
+                  </p>}
                 </button>
               ))}
             </div>
@@ -765,7 +995,10 @@ export function RecipesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--bg-border)' }}>
-                      {[t('recipes.table.recipe'), t('recipes.table.category'), t('recipes.table.sellingPrice'), t('recipes.table.foodCost'), t('recipes.table.rag'), t('recipes.table.actions')].map((h, i) => (
+                      {(isPrepView
+                        ? [t('recipes.table.recipe'), t('recipes.table.category'), t('recipes.prep.unitCost'), t('recipes.prep.yield'), t('recipes.prep.usedInHeader'), t('recipes.table.actions')]
+                        : [t('recipes.table.recipe'), t('recipes.table.category'), t('recipes.table.sellingPrice'), t('recipes.table.foodCost'), t('recipes.table.rag'), t('recipes.table.actions')]
+                      ).map((h, i) => (
                         <th
                           key={i}
                           className={`px-5 py-3 text-xs font-medium uppercase tracking-wide text-left${i === 2 || i === 3 ? ' text-right' : ''}`}
@@ -810,17 +1043,33 @@ export function RecipesPage() {
                             </span>
                           ) : <span style={{ color: 'var(--bg-border)' }}>—</span>}
                         </td>
-                        <td className="px-5 py-3 text-right" style={{ color: 'var(--text-secondary)' }}>
-                          {fmt(Number(r.sellingPrice))} €
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: fcBg(r.foodCost.foodCostPercent), color: fcColor(r.foodCost.foodCostPercent) }}>
-                            {fmt(r.foodCost.foodCostPercent, 1)} %
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="h-2 w-2 rounded-full" style={{ background: ragLeftBorder(r.foodCost.ragStatus) }} />
-                        </td>
+                        {r.isPreparation ? (
+                          <>
+                            <td className="px-5 py-3 text-right font-medium" style={{ color: 'var(--accent)' }}>
+                              {fmt(Number(r.unitCost ?? 0))} € / {r.unitCostUnit}
+                            </td>
+                            <td className="px-5 py-3 text-right" style={{ color: 'var(--text-secondary)' }}>
+                              {r.yieldQuantity ? `${fmt(Number(r.yieldQuantity), 3).replace(/,?0+$/, '')} ${r.yieldUnit ?? ''}` : '—'}
+                            </td>
+                            <td className="px-5 py-3 text-xs" style={{ color: 'var(--text-tertiary)' }} title={r.usedIn.map((u) => u.name).join(', ')}>
+                              {t('recipes.prep.usedIn', { count: r.usedIn.length })}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-5 py-3 text-right" style={{ color: 'var(--text-secondary)' }}>
+                              {fmt(Number(r.sellingPrice))} €
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: fcBg(r.foodCost.foodCostPercent), color: fcColor(r.foodCost.foodCostPercent) }}>
+                                {fmt(r.foodCost.foodCostPercent, 1)} %
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <div className="h-2 w-2 rounded-full" style={{ background: ragLeftBorder(r.foodCost.ragStatus) }} />
+                            </td>
+                          </>
+                        )}
                         <td className="px-5 py-3">
                           <div className="flex gap-1">
                             <button
@@ -837,14 +1086,16 @@ export function RecipesPage() {
                             >
                               {t('common.edit')}
                             </button>
-                            <button
-                              onClick={() => handleToggleActive(r)}
-                              className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
-                              style={{ color: 'var(--text-tertiary)' }}
-                              title={t('recipes.active.excludedHint')}
-                            >
-                              {r.isActive ? t('recipes.active.remove') : t('recipes.active.restore')}
-                            </button>
+                            {!r.isPreparation && (
+                              <button
+                                onClick={() => handleToggleActive(r)}
+                                className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+                                style={{ color: 'var(--text-tertiary)' }}
+                                title={t('recipes.active.excludedHint')}
+                              >
+                                {r.isActive ? t('recipes.active.remove') : t('recipes.active.restore')}
+                              </button>
+                            )}
                             <button
                               onClick={() => setModal({ type: 'delete', recipe: r })}
                               className="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
@@ -865,10 +1116,25 @@ export function RecipesPage() {
       </div>
 
       {modal?.type === 'create' && (
-        <RecipeFormModal title={t('recipes.form.createTitle')} initial={EMPTY_FORM} ingredients={ingredients} onSave={handleCreate} onClose={() => setModal(null)} />
+        <RecipeFormModal
+          title={isPrepView ? t('recipes.prep.createTitle') : t('recipes.form.createTitle')}
+          initial={isPrepView ? EMPTY_PREP_FORM : EMPTY_FORM}
+          ingredients={ingredients}
+          preparations={preparations}
+          onSave={handleCreate}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'edit' && (
-        <RecipeFormModal title={t('recipes.form.editTitle', { name: modal.recipe.name })} initial={recipeToForm(modal.recipe)} ingredients={ingredients} onSave={(form) => handleEdit(modal.recipe, form)} onClose={() => setModal(null)} />
+        <RecipeFormModal
+          title={t('recipes.form.editTitle', { name: modal.recipe.name })}
+          initial={recipeToForm(modal.recipe)}
+          ingredients={ingredients}
+          preparations={preparations}
+          editingId={modal.recipe.id}
+          onSave={(form) => handleEdit(modal.recipe, form)}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === 'delete' && (
         <DeleteModal recipe={modal.recipe} onConfirm={() => handleDelete(modal.recipe)} onCancel={() => setModal(null)} />

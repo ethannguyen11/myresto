@@ -267,6 +267,28 @@
       "showInactive": "Afficher les plats retirés",
       "hideInactive": "Masquer les plats retirés",
       "excludedHint": "Les plats retirés ne comptent pas dans les moyennes ni les alertes."
+    },
+    "prep": {
+      "tabDishes": "Plats",
+      "tabPreparations": "Préparations",
+      "add": "Nouvelle préparation",
+      "createTitle": "Nouvelle préparation",
+      "intro": "Sauces, fonds, pâtes… Une préparation n'est pas vendue seule : elle s'utilise comme un ingrédient dans vos plats, et son coût suit automatiquement les prix de ses ingrédients.",
+      "checkbox": "Préparation de base",
+      "checkboxHint": "Sauce, fond, pâte… utilisable comme ingrédient dans d'autres recettes, exclue de l'analyse du menu.",
+      "yield": "Rendement",
+      "yieldTooltip": "Quantité obtenue avec cette recette, ex. 1,5 L de sauce. Sert à calculer le coût au litre ou au kilo.",
+      "portion": "portion",
+      "batchCost": "Coût de la recette",
+      "unitCost": "Coût unitaire",
+      "groupIngredients": "Ingrédients",
+      "groupPreparations": "Préparations",
+      "badge": "prépa",
+      "usedInHeader": "Utilisée dans",
+      "usedIn_zero": "Non utilisée",
+      "usedIn_one": "Utilisée dans {{count}} recette",
+      "usedIn_other": "Utilisée dans {{count}} recettes",
+      "unitMismatch": "Unité incompatible avec celle de l'ingrédient : vérifiez cette ligne."
     }
   },
   "invoices": {
@@ -350,6 +372,11 @@
       "displayed_one": "{{count}} facture affichée",
       "displayed_other": "{{count}} factures affichées",
       "noResults": "Aucune facture pour ces filtres."
+    },
+    "conversion": {
+      "label": "« {{invoiceUnit}} » ne se convertit pas en unité de {{ingredient}} :",
+      "pending_one": "{{count}} ligne attend une conversion d'unité : indiquez combien contient une unité de la facture, puis validez à nouveau.",
+      "pending_other": "{{count}} lignes attendent une conversion d'unité : indiquez combien contient une unité de la facture, puis validez à nouveau."
     }
   },
   "techSheets": {
@@ -563,5 +590,20 @@
       "disclaimer": "Le conseiller a accès à toutes vos données en temps réel.",
       "error": "Erreur lors de la réponse IA."
     }
+  },
+  "impact": {
+    "title": "Impact sur vos plats",
+    "modalTitle": "Impact du nouveau prix — {{name}}",
+    "preview": "Voir l'impact sur mes plats",
+    "none": "Aucun plat n'est touché par ce changement.",
+    "dish": "Plat",
+    "cost": "Coût matière",
+    "foodCost": "Food cost",
+    "price": "Prix conseillé",
+    "offMenu": "hors carte",
+    "preparations": "Préparations recalculées :",
+    "suggestedHint": "Prix qui ramène le food cost à {{pct}} %",
+    "footnote": "Prix conseillé : celui qui ramène le food cost à son niveau d'avant, arrondi aux 10 centimes supérieurs.",
+    "ok": "Compris"
   }
 }

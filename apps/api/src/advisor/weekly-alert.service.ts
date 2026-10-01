@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import Anthropic from '@anthropic-ai/sdk'
 import { PrismaService } from '../prisma/prisma.service'
+import { RecipesService } from '../recipes/recipes.service'
 
 export type AlertSeverity = 'info' | 'warning' | 'critical'
 
@@ -15,7 +16,10 @@ export class WeeklyAlertService {
   private readonly logger = new Logger(WeeklyAlertService.name)
   private readonly client: Anthropic
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private recipesService: RecipesService,
+  ) {
     this.client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   }
 
@@ -33,11 +37,6 @@ export class WeeklyAlertService {
       include: {
         ingredient: {
           include: {
-            recipeItems: {
-              include: {
-                recipe: { select: { id: true, name: true, sellingPrice: true } },
-              },
-            },
             priceHistory: {
               orderBy: { recordedAt: 'desc' },
               take: 2,
@@ -101,41 +100,19 @@ export class WeeklyAlertService {
 
       if (Math.abs(entry.variationPct) < 0.01) continue // unchanged
 
-      // 4. Calculate food cost impact on each recipe using this ingredient
-      const ing = recentHistories.find((h) => h.ingredientId === ingId)?.ingredient
-      if (ing) {
-        const seen = new Set<number>()
-        for (const ri of ing.recipeItems) {
-          if (seen.has(ri.recipe.id)) continue
-          seen.add(ri.recipe.id)
-
-          // Load the full recipe items to estimate total cost
-          const fullItems = await this.prisma.recipeItem.findMany({
-            where: { recipeId: ri.recipe.id },
-            include: { ingredient: true },
-          })
-
-          const newTotalCost = fullItems.reduce((sum, item) => {
-            const price =
-              item.ingredientId === ingId
-                ? entry.lastPriceThisWeek
-                : Number(item.ingredient.currentPrice)
-            return sum + price * Number(item.quantity)
-          }, 0)
-
-          const sellingPrice = Number(ri.recipe.sellingPrice)
-          const newFoodCostPct =
-            sellingPrice > 0
-              ? Math.round((newTotalCost / sellingPrice) * 10000) / 100
-              : null
-
-          entry.affectedRecipes.push({
-            name: ri.recipe.name,
-            sellingPrice,
-            newFoodCostPct,
-          })
-        }
-      }
+      // 4. Impact sur les plats à la carte, sous-recettes comprises
+      const impact = await this.recipesService.priceImpact(
+        userId,
+        new Map([[ingId, entry.lastPriceThisWeek]]),
+        new Map([[ingId, entry.firstPriceThisWeek]]),
+      )
+      entry.affectedRecipes = impact
+        .filter((row) => !row.isPreparation && row.isActive)
+        .map((row) => ({
+          name: row.name,
+          sellingPrice: row.sellingPrice,
+          newFoodCostPct: row.sellingPrice > 0 ? row.foodCostAfter : null,
+        }))
 
       changedIngredients.push(entry)
     }

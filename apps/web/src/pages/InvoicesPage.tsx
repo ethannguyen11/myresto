@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
+import { conversionFactor } from '../lib/units';
+import { PriceImpactTable, type PriceImpactRow } from '../components/PriceImpactTable';
 
 type InvoiceStatus = 'pending' | 'analyzing' | 'reviewed' | 'validated' | 'error';
 
@@ -10,6 +12,12 @@ interface InvoiceItem {
   unitPrice: number | null; totalPrice: number | null; isConfirmed: boolean;
   ingredientId: number | null; ingredient: Ingredient | null;
   matchScore: number | null; matchMethod: string | null;
+  conversionFactor: number | null;
+}
+interface ValidationResult {
+  updated: number; created: number; ignored: number;
+  needsConversion: { itemId: number; rawName: string; invoiceUnit: string | null; ingredientName: string; ingredientUnit: string }[];
+  impact: PriceImpactRow[];
 }
 interface Invoice {
   id: number; supplierName: string | null; invoiceDate: string | null;
@@ -211,10 +219,28 @@ function ValidationModal({ invoice, ingredients, onClose, onValidated }: {
     for (const item of invoice.items) init[item.id] = item.ingredientId ? String(item.ingredientId) : '';
     return init;
   });
+  // Facteur saisi par ligne : combien d'unités de l'ingrédient dans 1 unité de la facture
+  const [factors, setFactors] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    for (const item of invoice.items) if (item.conversionFactor) init[item.id] = String(Number(item.conversionFactor));
+    return init;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ updated: number; created: number; ignored: number } | null>(null);
-  const unconfirmed = invoice.items.filter((i) => !i.isConfirmed);
+  const [result, setResult] = useState<ValidationResult | null>(null);
+  // Lignes encore à traiter : au départ les non confirmées, ensuite celles qui attendent une conversion
+  const [pendingIds, setPendingIds] = useState<Set<number>>(
+    () => new Set(invoice.items.filter((i) => !i.isConfirmed).map((i) => i.id)),
+  );
+  const unconfirmed = invoice.items.filter((i) => pendingIds.has(i.id));
+  const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
+
+  /** Vrai si l'unité de la facture ne se convertit pas seule vers celle de l'ingrédient choisi */
+  function needsFactor(item: InvoiceItem): Ingredient | null {
+    const ing = ingredientById.get(parseInt(selections[item.id]));
+    if (!ing || !item.unit) return null;
+    return conversionFactor(item.unit, ing.unit) === null ? ing : null;
+  }
 
   async function handleValidate() {
     setError('');
@@ -229,11 +255,27 @@ function ValidationModal({ invoice, ingredients, onClose, onValidated }: {
       await Promise.allSettled(
         toMemorize.map((item) => api.post('/invoices/remember-match', { rawName: item.rawName, ingredientId: parseInt(selections[item.id]) })),
       );
-      const items = unconfirmed.map((item) => ({ itemId: item.id, ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null }));
-      const res = await api.post<{ updated: number; created: number; ignored: number }>(`/invoices/${invoice.id}/validate-items`, { items });
-      setResult(res.data);
+      const items = unconfirmed.map((item) => {
+        const factor = parseFloat(factors[item.id]);
+        return {
+          itemId: item.id,
+          ingredientId: selections[item.id] ? parseInt(selections[item.id]) : null,
+          ...(needsFactor(item) && factor > 0 ? { conversionFactor: factor } : {}),
+        };
+      });
+      const res = await api.post<ValidationResult>(`/invoices/${invoice.id}/validate-items`, { items });
+      // Cumule avec un passage précédent (lignes converties après coup)
+      setResult((prev) => prev ? {
+        ...res.data,
+        updated: prev.updated + res.data.updated,
+        created: prev.created + res.data.created,
+        impact: [...prev.impact.filter((r) => !res.data.impact.some((n) => n.recipeId === r.recipeId)), ...res.data.impact],
+      } : res.data);
+      setPendingIds(new Set(res.data.needsConversion.map((n) => n.itemId)));
       onValidated();
-      setTimeout(() => onClose(), 2000);
+      if (res.data.needsConversion.length === 0 && res.data.impact.length === 0) {
+        setTimeout(() => onClose(), 2000);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message ?? t('invoices.validation.error'));
     } finally {
@@ -259,6 +301,17 @@ function ValidationModal({ invoice, ingredients, onClose, onValidated }: {
         {result && (
           <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(16,185,129,0.1)', color: 'var(--green)', border: '1px solid rgba(16,185,129,0.2)' }}>
             ✅ {result.updated} prix mis à jour · {result.created} ingrédient{result.created !== 1 ? 's' : ''} créé{result.created !== 1 ? 's' : ''}
+          </div>
+        )}
+        {result && result.needsConversion.length > 0 && (
+          <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(245,158,11,0.1)', color: 'var(--amber)', border: '1px solid rgba(245,158,11,0.25)' }}>
+            {t('invoices.conversion.pending', { count: result.needsConversion.length })}
+          </div>
+        )}
+        {result && result.impact.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>{t('impact.title')}</p>
+            <PriceImpactTable rows={result.impact} />
           </div>
         )}
         <div
@@ -302,6 +355,24 @@ function ValidationModal({ invoice, ingredients, onClose, onValidated }: {
                     <option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>
                   ))}
                 </select>
+                {(() => {
+                  const ing = needsFactor(item);
+                  if (!ing) return null;
+                  return (
+                    <div className="col-span-5 flex flex-wrap items-center justify-end gap-2 text-xs" style={{ color: 'var(--amber)' }}>
+                      <span>{t('invoices.conversion.label', { invoiceUnit: item.unit, ingredient: ing.name })}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>1 {item.unit} =</span>
+                      <input
+                        type="number" min="0" step="0.001"
+                        value={factors[item.id] ?? ''}
+                        onChange={(e) => setFactors((f) => ({ ...f, [item.id]: e.target.value }))}
+                        placeholder="5"
+                        style={{ ...inputStyle, width: 80 }}
+                      />
+                      <span style={{ color: 'var(--text-secondary)' }}>{ing.unit}</span>
+                    </div>
+                  );
+                })()}
               </li>
             ))
           )}

@@ -143,17 +143,14 @@ ${dashboard.alerts.length > 0 ? dashboard.alerts.join('\n') : 'Aucune alerte.'}
           ? Math.round((totalCost / (targetFoodCost / 100)) * 100) / 100
           : null
 
-      // Most impactful ingredient (highest line cost)
-      const mostImpactful = r.items.reduce(
-        (best: any, item: any) => {
-          const lineCost =
-            Number(item.ingredient.currentPrice) * Number(item.quantity)
-          return lineCost > (best?.lineCost ?? -Infinity)
-            ? { name: item.ingredient.name, lineCost, quantity: Number(item.quantity), unit: item.ingredient.unit }
-            : best
-        },
-        null as any,
+      // Ligne la plus coûteuse (ingrédient ou préparation), unités converties
+      const top = r.costLines.reduce(
+        (best, l) => (l.cost > (best?.cost ?? -Infinity) ? l : best),
+        null as (typeof r.costLines)[number] | null,
       )
+      const mostImpactful = top
+        ? { name: top.name, lineCost: top.cost, quantity: top.quantity, unit: top.unit }
+        : null
 
       return {
         name: r.name,

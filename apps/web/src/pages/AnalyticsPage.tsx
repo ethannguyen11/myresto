@@ -62,7 +62,8 @@ export function AnalyticsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   useEffect(() => {
-    api.get<Recipe[]>('/recipes')
+    // Plats à la carte uniquement : ni plats retirés, ni préparations de base
+    api.get<Recipe[]>('/recipes?activeOnly=true')
       .then((r) => setRecipes(r.data))
       .catch(() => setError(t('analytics.loadError')))
       .finally(() => setLoading(false));
